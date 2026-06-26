@@ -172,10 +172,9 @@ cd docker && docker compose up --build
 # Frontend: http://localhost:3000  API: http://localhost:8000/docs
 ```
 
-- [ ] **Step 5: Init git and commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git init
 git add -A
 git commit -m "chore: repo skeleton and env scaffolding
 
@@ -257,12 +256,11 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 `backend/tests/test_models.py`:
 ```python
 from datetime import datetime
-from app.database import Base, SessionLocal
+from app.database import SessionLocal
 from app.models import Car
 
 
 def test_car_can_be_inserted_and_queried():
-    Base.metadata.create_all(bind=SessionLocal.kw["bind"])  # sqlite from conftest
     db = SessionLocal()
     try:
         db.query(Car).delete()
@@ -321,10 +319,9 @@ def init_db() -> None:
 
 ```python
 import uuid
-from sqlalchemy import String, Integer, Numeric, Index
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
-from sqlalchemy.orm import Mapped, mapped_column
 from datetime import datetime, timezone
+from sqlalchemy import String, Integer, Numeric, Index, Uuid
+from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
 
 
@@ -335,9 +332,8 @@ def _now() -> datetime:
 class Car(Base):
     __tablename__ = "cars"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        PG_UUID(as_uuid=True, server_default=func_uuid()), primary_key=True, default=uuid.uuid4
-    )
+    # Portable UUID: native in Postgres, CHAR(36) in SQLite (tests).
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     title: Mapped[str] = mapped_column(String, nullable=False)
     brand: Mapped[str] = mapped_column(String, nullable=False)
     model: Mapped[str] = mapped_column(String, nullable=False)
@@ -362,44 +358,22 @@ class Car(Base):
     )
 ```
 
-Note: `func_uuid`/`server_default` differ per dialect. Add the import + helper at the top of `models.py`:
-
-```python
-from sqlalchemy import func as sa_func
-from sqlalchemy import TypeDecorator
-from sqlalchemy.types import CHAR
-
-# Portable UUID: native in Postgres, CHAR(36) in SQLite (tests).
-from sqlalchemy import Uuid
-
-# Replace PG_UUID column with SQLAlchemy 2.0 portable Uuid:
-# id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-```
-
-**Implementation decision (use this, not the PG_UUID above):** Use SQLAlchemy 2.0's portable `Uuid` type so the same model works on Postgres (native) and SQLite (tests). Final column:
-
-```python
-id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-```
-and drop `PG_UUID`/`func_uuid`. The `created_at` default stays. Remove unused imports (`PG_UUID`, `sa_func`, `TypeDecorator`, `CHAR`).
-
 - [ ] **Step 5: Write `backend/tests/conftest.py` (sqlite engine for tests)**
 
 ```python
 import pytest
 from sqlalchemy import create_engine
-from app.database import Base, SessionLocal, engine as prod_engine
-import app.models  # noqa
+from app.database import Base, SessionLocal, engine
+import app.models  # noqa: F401  register the Car model
+
 
 @pytest.fixture(scope="function", autouse=True)
 def sqlite_db(tmp_path):
     test_engine = create_engine(f"sqlite:///{tmp_path}/test.db", future=True)
     Base.metadata.create_all(bind=test_engine)
-    import app.database as dbmod
-    real = SessionLocal.kw["bind"]
     SessionLocal.configure(bind=test_engine)
     yield
-    SessionLocal.configure(bind=real)
+    SessionLocal.configure(bind=engine)
     Base.metadata.drop_all(bind=test_engine)
 ```
 
@@ -869,11 +843,6 @@ def test_health():
 
 def test_get_cars_and_search():
     db = SessionLocal()
-    try:
-        db.query(type(db.query.__self__.query(app=None) and None))  # placeholder cleanup below
-    except Exception:
-        pass
-    # seed via crud
     upsert_car(db, dict(title="VW Golf", brand="volkswagen", model="golf", year=2020,
                         price=60000, currency="PLN", mileage=50000, fuel_type="petrol",
                         transmission="manual", location="Wawa", source="otomoto",
@@ -888,8 +857,6 @@ def test_get_cars_and_search():
     assert sr.json()["total"] == 1
     assert sr.json()["items"][0]["brand"] == "volkswagen"
 ```
-
-(Delete the `try/except placeholder cleanup` block before running — it is illustrative only. Final test should simply seed via `upsert_car` then query.)
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -987,35 +954,6 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 - Produces: `scrapers.base.ScrapeResult` (dataclass: `source: str, listings: list[dict], blocked: bool, reason: str | None`), `scrapers.base.BaseScraper` (abstract async class; subclass sets `source`, `build_url()`, and `parse_page(page) -> list[dict]` of raw dicts; `run(playwright)` returns `ScrapeResult`). Subclasses use `normalize()` from the normalizer before returning listings.
 
 - [ ] **Step 1: Write `scrapers/base.py`**
-
-```python
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from typing import Optional
-from playwright.async_api import Page, Playwright
-
-
-BLOCKED_MARKERS = ("access denied", "captcha", "unblock", "zabezpieczenie",
-                   "datadome", "are you human", "weryfikacja")
-
-
-@dataclass
-class ScrapeResult:
-    source: str
-    listings: list[dict] = field(default_factory=list)
-    blocked: bool = False
-    reason: Optional[str] = None
-
-
-def is_blocked(page: Page) -> bool:
-    try:
-        title = (page.title() or "") if False else ""  # title() is sync? see note
-    except Exception:
-        title = ""
-    return False  # replaced below by async helper
-```
-
-> **Note (replace the stub above):** `page.title()` is a coroutine in async Playwright. Implement an `async` helper and call it inside `run()`. Final `base.py`:
 
 ```python
 from abc import ABC, abstractmethod
@@ -1444,19 +1382,33 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 ## Task 12: ScrapeJobManager runner (TDD)
 
 **Files:**
-- Create: `backend/app/scraper_runner.py`, `backend/tests/test_runner.py`
+- Create: `backend/app/scraper_runner.py`, `backend/tests/test_runner.py`, `backend/pytest.ini`
 
 **Interfaces:**
 - Consumes: scrapers (`OtomotoScraper`, `OLXScraper`, `FacebookScraper`), `BaseScraper.run`, `crud.upsert_car`, `database.SessionLocal`.
-- Produces: `scraper_runner.manager` (singleton instance). Methods: `start() -> ScrapeStart` (raises if running), `status() -> ScrapeStatus`, internal `_run(job_id)` async coroutine that iterates scrapers, persists listings, fills `per_source` counts.
+- Produces: `scraper_runner.manager` (singleton instance). Methods: `async start() -> ScrapeStart` (raises HTTP 409 if a job is running, then schedules a background `asyncio.Task`), `status() -> ScrapeStatus`, internal `async _run(job_id)` that iterates scrapers, persists listings, fills `per_source` counts. Also creates `backend/pytest.ini` with `asyncio_mode = auto` so async test functions run without per-test markers.
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Write `backend/pytest.ini` and the failing test**
+
+`backend/pytest.ini`:
+```ini
+[pytest]
+asyncio_mode = auto
+```
 
 `backend/tests/test_runner.py`:
 ```python
-import asyncio
 from app.scraper_runner import ScrapeJobManager
 from scrapers.base import ScrapeResult
+
+
+class FakePlaywright:
+    """Async context manager that mimics `async_playwright()` without launching a browser."""
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *exc):
+        return False
 
 
 def test_status_starts_idle():
@@ -1464,11 +1416,8 @@ def test_status_starts_idle():
     assert m.status().status == "idle"
 
 
-def test_start_then_done_with_mock_scrapers(monkeypatch):
+async def test_start_then_done_with_mock_scrapers(monkeypatch):
     m = ScrapeJobManager()
-
-    class FakePlaywright:
-        pass
 
     def fake_make_scrapers():
         class S:
@@ -1483,13 +1432,24 @@ def test_start_then_done_with_mock_scrapers(monkeypatch):
         return [S()]
 
     monkeypatch.setattr(m, "_make_scrapers", fake_make_scrapers)
-    monkeypatch.setattr(m, "_run_playwright", lambda coro: asyncio.get_event_loop().run_until_complete(coro))
-    start = m.start()
+    monkeypatch.setattr(m, "_get_playwright", lambda: FakePlaywright())
+    start = await m.start()
     assert start.status == "running"
-    m._run_playwright(m._current_coro)  # execute synchronously
+    await m._task  # wait for the background scrape task to finish
     st = m.status()
     assert st.status == "done"
     assert st.per_source["otomoto"].saved == 1
+
+
+async def test_start_raises_409_when_running():
+    from fastapi import HTTPException
+    m = ScrapeJobManager()
+    m._status.status = "running"
+    try:
+        await m.start()
+        assert False, "expected HTTPException 409"
+    except HTTPException as e:
+        assert e.status_code == 409
 ```
 
 - [ ] **Step 2: Run to verify it fails**
@@ -1505,7 +1465,6 @@ Expected: FAIL — `ModuleNotFoundError: app.scraper_runner`.
 import asyncio
 import uuid
 from datetime import datetime, timezone
-from typing import Callable
 from app import schemas
 from app.crud import upsert_car
 from app.database import SessionLocal
@@ -1522,7 +1481,7 @@ def _now():
 class ScrapeJobManager:
     def __init__(self):
         self._status = schemas.ScrapeStatus(status="idle", per_source={})
-        self._current_coro = None
+        self._task: asyncio.Task | None = None
 
     def status(self) -> schemas.ScrapeStatus:
         return self._status
@@ -1530,53 +1489,52 @@ class ScrapeJobManager:
     def _make_scrapers(self) -> list[BaseScraper]:
         return [OtomotoScraper(), OLXScraper(), FacebookScraper()]
 
-    def _run_playwright(self, coro):
-        """Default: run in the running event loop; overridable in tests."""
-        loop = asyncio.get_event_loop()
-        return loop.create_task(coro)
+    def _get_playwright(self):
+        from playwright.async_api import async_playwright
+        return async_playwright()
 
-    def start(self) -> schemas.ScrapeStart:
+    async def start(self) -> schemas.ScrapeStart:
+        from fastapi import HTTPException
         if self._status.status == "running":
-            from fastapi import HTTPException
             raise HTTPException(status_code=409, detail="a scrape is already running")
         job_id = str(uuid.uuid4())
         self._status = schemas.ScrapeStatus(
             status="running", job_id=job_id, started_at=_now(),
             per_source={s.source: schemas.SourceResult() for s in self._make_scrapers()},
         )
-        self._current_coro = self._run(job_id)
-        self._run_playwright(self._current_coro)
+        self._task = asyncio.create_task(self._run(job_id))
         return schemas.ScrapeStart(job_id=job_id, status="running")
 
     async def _run(self, job_id: str):
-        from playwright.async_api import async_playwright
-        scrapers = self._make_scrapers()
-        async with async_playwright() as pw:
-            for scraper in scrapers:
-                result = await scraper.run(pw)
-                sr = self._status.per_source.setdefault(scraper.source, schemas.SourceResult())
-                if result.blocked:
-                    sr.blocked += 1
-                    if "error" in (result.reason or ""):
-                        sr.errors += 1
-                    continue
-                sr.found += len(result.listings)
-                db = SessionLocal()
-                try:
-                    for listing in result.listings:
-                        upsert_car(db, listing)
-                        sr.saved += 1
-                finally:
-                    db.close()
-        self._status.status = "done"
-        self._status.finished_at = _now()
-        self._status.total_saved = sum(s.saved for s in self._status.per_source.values())
+        try:
+            scrapers = self._make_scrapers()
+            async with self._get_playwright() as pw:
+                for scraper in scrapers:
+                    result = await scraper.run(pw)
+                    sr = self._status.per_source.setdefault(scraper.source, schemas.SourceResult())
+                    if result.blocked:
+                        sr.blocked += 1
+                        if "error" in (result.reason or ""):
+                            sr.errors += 1
+                        continue
+                    sr.found += len(result.listings)
+                    db = SessionLocal()
+                    try:
+                        for listing in result.listings:
+                            upsert_car(db, listing)
+                            sr.saved += 1
+                    finally:
+                        db.close()
+            self._status.status = "done"
+        except Exception:
+            self._status.status = "error"
+        finally:
+            self._status.finished_at = _now()
+            self._status.total_saved = sum(s.saved for s in self._status.per_source.values())
 
 
 manager = ScrapeJobManager()
 ```
-
-> **Note:** In the production `start()` path `_run_playwright` schedules the coroutine as a background `Task` on the loop that FastAPI/uvicorn runs. For dev that loop exists; the task persists across requests until done. If `start()` is called outside a running loop (e.g. from a sync test), the override in the test drives execution.
 
 - [ ] **Step 4: Run to verify it passes**
 
@@ -1588,7 +1546,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/app/scraper_runner.py backend/tests/test_runner.py
+git add backend/app/scraper_runner.py backend/tests/test_runner.py backend/pytest.ini
 git commit -m "feat(backend): ScrapeJobManager runner
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
@@ -1626,9 +1584,11 @@ def test_status_endpoint():
 
 def test_run_returns_202(monkeypatch):
     manager._status = schemas.ScrapeStatus(status="idle", per_source={})
-    # avoid real playwright: make start synchronous no-op
-    monkeypatch.setattr(manager, "_make_scrapers", lambda: [])
-    monkeypatch.setattr(manager, "_run_playwright", lambda coro: None)
+
+    async def fake_run(job_id):  # avoid launching real playwright
+        manager._status.status = "done"
+
+    monkeypatch.setattr(manager, "_run", fake_run)
     client = TestClient(app)
     r = client.post("/scrape/run")
     assert r.status_code == 202
@@ -1659,9 +1619,8 @@ router = APIRouter(prefix="/scrape", tags=["scrape"])
 
 
 @router.post("/run", status_code=202)
-def run():
-    start = manager.start()
-    return start
+async def run():
+    return await manager.start()
 
 
 @router.get("/status")
@@ -2363,5 +2322,5 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 ## Self-Review (completed during authoring)
 
 - **Spec coverage:** §1 goals → all tasks; §3 DB schema + indexes → Task 3; §4 API + filters + async runner → Tasks 5,6,7,12,13; §5 scrapers/normalizer/pipeline → Tasks 4,8,9,10,11,12; §6 frontend → Tasks 16,17; §7 docker → Task 18; §8 errors → runner try/except + 409 + frontend catch; §9 tests → Tasks 3–13; §10 seed/demo → Tasks 14,15; §11 success criteria → Task 19. No gaps.
-- **Placeholders:** none left (the two illustrative stubs in Tasks 7/8 are explicitly marked "replace with" and the final code is given).
+- **Placeholders:** none left — the earlier double-version stubs in Tasks 3/7/8 were collapsed to single final versions, and the scrape path (Tasks 12/13) was refactored to a correct `async` implementation.
 - **Type consistency:** `ScrapeResult`, `SourceResult`, `SearchFilters`, `ScrapeStatus`, `parse_html`, `manager.start/status` names match across tasks. CRUD uses `SearchFilters` (Task 6 before Task 5 — ordering note called out).
