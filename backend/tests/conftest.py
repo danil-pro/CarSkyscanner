@@ -1,3 +1,11 @@
+import os
+import sys
+
+# Make the repo root importable so `scrapers` (sibling of backend/) resolves.
+_REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
+
 import pytest
 from sqlalchemy import create_engine
 from app.database import Base, SessionLocal, engine
