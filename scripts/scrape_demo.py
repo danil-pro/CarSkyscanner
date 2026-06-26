@@ -1,5 +1,6 @@
 import asyncio, os, sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
+# scrapers/ lives at the repo root, not under backend/
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from scrapers.otomoto import OtomotoScraper
 from scrapers.olx import OLXScraper
 from scrapers.facebook import FacebookScraper
