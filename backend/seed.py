@@ -42,9 +42,10 @@ def main():
     init_db()
     db = SessionLocal()
     try:
-        for item in build_seed():
+        items = build_seed()
+        for item in items:
             upsert_car(db, item)
-        print(f"Seeded {len(build_seed())} cars")
+        print(f"Seeded {len(items)} cars")
     finally:
         db.close()
 

@@ -8,11 +8,14 @@ import { ScrapePanel } from "@/components/ScrapePanel";
 export default function Page() {
   const [cars, setCars] = useState<Car[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeFilters, setActiveFilters] = useState<Filters | undefined>();
 
   const load = (f?: Filters) => {
     setLoading(true);
     const hasFilters = f && Object.values(f).some(Boolean);
-    const p = hasFilters ? searchCars(f!) : getCars();
+    const next = hasFilters ? f : undefined;
+    setActiveFilters(next);
+    const p = next ? searchCars(next) : getCars();
     p.then((r) => setCars(r.items))
       .catch(() => setCars([]))
       .finally(() => setLoading(false));
@@ -23,16 +26,16 @@ export default function Page() {
   }, []);
 
   // Periodically refresh results so newly-scraped cars appear.
+  // Preserve any active filter instead of clobbering it with the full list.
   useEffect(() => {
-    const t = setInterval(
-      () =>
-        getCars()
-          .then((r) => setCars(r.items))
-          .catch(() => {}),
-      10000,
-    );
+    const t = setInterval(() => {
+      const f = activeFilters;
+      const hasFilters = f && Object.values(f).some(Boolean);
+      const p = hasFilters ? searchCars(f!) : getCars();
+      p.then((r) => setCars(r.items)).catch(() => {});
+    }, 10000);
     return () => clearInterval(t);
-  }, []);
+  }, [activeFilters]);
 
   return (
     <main className="max-w-5xl mx-auto p-4 space-y-4">
