@@ -9,5 +9,15 @@ class Settings(BaseSettings):
     BACKEND_PORT: int = 8000
     AUTO_SEED: bool = True
 
+    # Live search
+    ENABLED_SOURCES: str = "olx,otomoto,facebook"
+    FB_STORAGE_STATE_PATH: str | None = None
+    SEARCH_PROVIDER_TIMEOUT_S: int = 45
+    SEARCH_JOB_TIMEOUT_S: int = 60
+
+    @property
+    def enabled_sources(self) -> list[str]:
+        return [s.strip() for s in self.ENABLED_SOURCES.split(",") if s.strip()]
+
 
 settings = Settings()
