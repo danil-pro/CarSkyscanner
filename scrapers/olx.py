@@ -15,7 +15,8 @@ def parse_html(html: str) -> list[dict]:
         meta = card.get_text(" ", strip=True)
         year = re.search(r"(19|20)\d{2}", meta)
         mileage = re.search(r"([\d  ]+)\s*km", meta)
-        url = resolve_url(BASE_URL, a["href"]) if a else None
+        href = a["href"] if a else None
+        url = resolve_url(BASE_URL, href)
         if not url:
             continue
         out.append({
@@ -27,7 +28,7 @@ def parse_html(html: str) -> list[dict]:
             "fuel_type": next((t for t in ("Benzyna", "Diesel", "Hybryda", "Elektryczny", "LPG") if t in meta), None),
             "transmission": None,
             "location": None,
-            "source": "olx",
+            "source": "otomoto" if "otomoto.pl" in (href or "") else "olx",
             "url": url,
             "image_url": extract_image_url(card, BASE_URL),
         })
