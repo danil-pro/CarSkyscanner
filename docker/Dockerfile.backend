@@ -1,4 +1,7 @@
-FROM python:3.11-slim
+# Pinned to bookworm: the floating python:3.11-slim tag now resolves to Debian
+# trixie, whose renamed font packages (ttf-unifont, ttf-ubuntu-font-family) break
+# `playwright install --with-deps`. Playwright 1.49.x has a known-good bookworm dep list.
+FROM python:3.11-slim-bookworm
 ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \

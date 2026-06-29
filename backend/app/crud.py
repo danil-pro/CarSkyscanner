@@ -23,9 +23,11 @@ def upsert_car(db: Session, data: dict) -> Car:
 
 def _apply(filters, q):
     if filters.brand:
-        q = q.where(func.lower(Car.brand) == filters.brand.lower())
+        b = f"%{filters.brand.strip()}%"
+        q = q.where(Car.brand.ilike(b) | Car.title.ilike(b))
     if filters.model:
-        q = q.where(Car.model.ilike(f"%{filters.model}%"))
+        m = f"%{filters.model.strip()}%"
+        q = q.where(Car.model.ilike(m) | Car.title.ilike(m))
     if filters.year_min is not None:
         q = q.where(Car.year >= filters.year_min)
     if filters.year_max is not None:

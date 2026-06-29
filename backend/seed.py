@@ -13,6 +13,11 @@ FUELS = ["petrol", "diesel", "hybrid", "electric", "lpg"]
 TRANS = ["manual", "automatic"]
 CITIES = ["Warszawa", "Kraków", "Wrocław", "Poznań", "Gdańsk", "Łódź"]
 SOURCES = ["otomoto", "olx", "facebook"]
+SOURCE_URLS = {
+    "otomoto": "https://www.otomoto.pl/osobowe",
+    "olx": "https://www.olx.pl/motoryzacja/samochody",
+    "facebook": "https://www.facebook.com/marketplace",
+}
 
 
 def build_seed(n=40) -> list[dict]:
@@ -32,7 +37,7 @@ def build_seed(n=40) -> list[dict]:
             "transmission": random.choice(TRANS),
             "location": random.choice(CITIES),
             "source": source,
-            "url": f"https://example.{source}/listing/{i}",
+            "url": f"{SOURCE_URLS[source]}?seed={i}",
             "image_url": f"https://picsum.photos/seed/{brand}{i}/400/300",
         })
     return out
