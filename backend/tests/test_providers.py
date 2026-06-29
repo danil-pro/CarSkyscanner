@@ -3,6 +3,7 @@ from scrapers.olx import parse_html
 from app.schemas import SearchFilters
 from scrapers.base import ScrapeResult
 from scrapers.providers import OLXProvider, OtomotoProvider, ProviderResult, _from_scrape
+from scrapers.facebook import FacebookProvider
 
 OLX_CARD_OTOMOTO_LINK = """
 <html><body>
@@ -49,3 +50,25 @@ def test_from_scrape_blocked():
 def test_from_scrape_ok():
     r = _from_scrape("olx", ScrapeResult("olx", listings=[{"x": 1}]))
     assert r.status == "ok" and r.found == 1
+
+
+def test_facebook_not_configured(tmp_path):
+    import asyncio
+    p = FacebookProvider(SearchFilters(brand="toyota"), storage_state_path=str(tmp_path / "missing.json"))
+    res = asyncio.run(p.search(playwright=None))
+    assert res.status == "session-not-configured"
+    assert res.source == "facebook"
+
+
+def test_facebook_parses_item_links(tmp_path):
+    html = """
+    <html><body>
+      <a href="/marketplace/item/111/">Toyota Yaris 2019 · 50 000 zł</a>
+      <a href="/marketplace/item/222/">Honda Civic 2018 · 40 000 zł</a>
+    </body></html>
+    """
+    p = FacebookProvider(SearchFilters(), storage_state_path=str(tmp_path / "x.json"))
+    listings = p._parse(html)
+    assert len(listings) == 2
+    assert listings[0]["source"] == "facebook"
+    assert listings[0]["url"].startswith("https://www.facebook.com/marketplace/item/")
