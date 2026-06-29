@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import cars, scrape
+from app.routers import cars, scrape, search_live
 from app.config import settings
 from app.database import init_db, SessionLocal
 
@@ -34,3 +34,4 @@ def health():
 
 app.include_router(cars.router)
 app.include_router(scrape.router)
+app.include_router(search_live.router)
