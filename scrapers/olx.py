@@ -13,7 +13,9 @@ def parse_html(html: str) -> list[dict]:
         a = card.select_one("a[href]")
         price = card.select_one('[data-testid="ad-price"]')
         meta = card.get_text(" ", strip=True)
-        year = re.search(r"(19|20)\d{2}", meta)
+        # Anchor the year to the spec line "YEAR - MILEAGE km" (or "YEAR · MILEAGE km").
+        # Without this, a listing date like "31 maja 2026" is grabbed before the real year.
+        year = re.search(r"((?:19|20)\d{2})\D{0,3}\d[\d ]*?km", meta)
         mileage = re.search(r"([\d  ]+)\s*km", meta)
         href = a["href"] if a else None
         url = resolve_url(BASE_URL, href)
@@ -22,7 +24,7 @@ def parse_html(html: str) -> list[dict]:
         out.append({
             "title": (card.select_one("h6").get_text(strip=True) if card.select_one("h6") else meta[:200]),
             "brand": "", "model": "",
-            "year": year.group(0) if year else None,
+            "year": year.group(1) if year else None,
             "price": price.get_text(strip=True) if price else None,
             "mileage": mileage.group(1).replace(" ", " ") if mileage else None,
             "fuel_type": next((t for t in ("Benzyna", "Diesel", "Hybryda", "Elektryczny", "LPG") if t in meta), None),

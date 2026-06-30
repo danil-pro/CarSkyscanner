@@ -85,3 +85,18 @@ def test_facebook_parse_then_normalize_price(tmp_path):
     assert n is not None
     assert n["price"] == 50000.0
     assert n["source"] == "facebook"
+
+
+def test_olx_parse_year_ignores_listing_date():
+    # Real OLX shape: a listing date "... 31 maja 2026" precedes the real "2019 - 110 480 km".
+    html = """
+    <html><body>
+    <div data-cy="l-card">
+      <a href="/d/oferta/vw-polo-ID1.html"><h6>VW Polo</h6></a>
+      <span data-testid="ad-price">55 999 zł</span>
+      <p>Przysucha - 31 maja 2026 2019 - 110 480 km Benzyna</p>
+    </div>
+    </body></html>
+    """
+    listings = parse_html(html)
+    assert listings[0]["year"] == "2019"
