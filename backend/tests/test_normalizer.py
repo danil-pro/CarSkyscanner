@@ -59,3 +59,15 @@ def test_normalize_produces_canonical_dict():
 def test_normalize_rejects_missing_url_or_price():
     assert normalize({"title": "x", "price": "10", "source": "olx", "url": ""}) is None
     assert normalize({"title": "x", "price": None, "source": "olx", "url": "u"}) is None
+
+
+def test_parse_year_rejects_future_years():
+    # Guard rejects years beyond next model year (now_year + 1): 2028 and 2099 are future.
+    assert parse_year("2028", now_year=2026) is None
+    assert parse_year("2099", now_year=2026) is None
+    # now_year + 1 (2027) is allowed — a plausible next-year model. now_year (2026) is allowed too.
+    # (This proves the guard alone does NOT fix the 2026 date bug — anchoring in Tasks 2-3 does.)
+    assert parse_year("2027", now_year=2026) == 2027
+    assert parse_year("2026", now_year=2026) == 2026
+    assert parse_year("2019", now_year=2026) == 2019
+    assert parse_year(None) is None

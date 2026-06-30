@@ -1,4 +1,5 @@
 import re
+from datetime import date
 from typing import Optional
 
 FUEL_MAP = {
@@ -67,11 +68,16 @@ def parse_mileage(value) -> Optional[int]:
     return int(m.group()) if m else None
 
 
-def parse_year(value) -> Optional[int]:
+def parse_year(value, now_year: Optional[int] = None) -> Optional[int]:
     if not value:
         return None
     m = re.search(r"(19|20)\d{2}", str(value))
-    return int(m.group()) if m else None
+    if not m:
+        return None
+    y = int(m.group())
+    if now_year is None:
+        now_year = date.today().year
+    return y if y <= now_year + 1 else None
 
 
 def normalize_fuel(value) -> str:
