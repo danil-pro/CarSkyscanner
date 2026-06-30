@@ -33,3 +33,14 @@ export const searchCars = (f: Filters) =>
   req<SearchResponse>("/search", { method: "POST", body: JSON.stringify(f) });
 export const runScrape = () => req<{ job_id: string; status: string }>("/scrape/run", { method: "POST" });
 export const getScrapeStatus = () => req<ScrapeStatus>("/scrape/status");
+
+export interface ProviderProgress { status: string; found: number; reason: string | null; }
+export interface LiveSearchJob {
+  job_id: string; status: string;
+  per_source: Record<string, ProviderProgress>;
+  results: Car[] | null; error?: string | null;
+}
+
+export const startLiveSearch = (f: Filters) =>
+  req<{ job_id: string; status: string }>("/search/live", { method: "POST", body: JSON.stringify(f) });
+export const getLiveSearch = (jobId: string) => req<LiveSearchJob>(`/search/live/${jobId}`);
