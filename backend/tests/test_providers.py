@@ -72,3 +72,16 @@ def test_facebook_parses_item_links(tmp_path):
     assert len(listings) == 2
     assert listings[0]["source"] == "facebook"
     assert listings[0]["url"].startswith("https://www.facebook.com/marketplace/item/")
+
+
+def test_facebook_parse_then_normalize_price(tmp_path):
+    # Regression: FB listings must go through normalize() so price/brand/model
+    # are parsed (raw "50 000" would otherwise fail the Numeric column).
+    from scrapers.normalizer import normalize
+    html = '<html><body><a href="/marketplace/item/9/">Toyota Yaris 2019 · 50 000 zł</a></body></html>'
+    p = FacebookProvider(SearchFilters(), storage_state_path=str(tmp_path / "x.json"))
+    raw = p._parse(html)[0]
+    n = normalize(raw)
+    assert n is not None
+    assert n["price"] == 50000.0
+    assert n["source"] == "facebook"

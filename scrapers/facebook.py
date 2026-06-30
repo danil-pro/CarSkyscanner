@@ -14,6 +14,7 @@ from scrapers.base import (
 )
 from scrapers.providers import ListingProvider, ProviderResult
 from scrapers.filters import build_facebook_url
+from scrapers.normalizer import normalize
 
 FB_BASE = "https://www.facebook.com/marketplace/"
 _LOGIN_MARKERS = ("/login", "/checkpoint", "/two_step", "/recover")
@@ -63,7 +64,7 @@ class FacebookProvider(ListingProvider):
             if not url:
                 continue
             text = a.get_text(" ", strip=True)
-            price = re.search(r"(\d[\d  ]*)\s*(zł|zl|PLN)?", text)
+            price = re.search(r"(\d[\d  ]*)\s*(?:zł|zl|PLN)", text)
             year = re.search(r"(19|20)\d{2}", text)
             out.append({
                 "title": text[:200] or None,
@@ -103,7 +104,7 @@ class FacebookProvider(ListingProvider):
             if any(m in current for m in _LOGIN_MARKERS):
                 return ProviderResult(self.source, status="session-invalid",
                                       reason=f"redirected to {current}")
-            raw = self._parse(await page.content())
+            raw = [n for n in (normalize(r) for r in self._parse(await page.content())) if n]
             return ProviderResult(self.source, listings=raw, status="ok", found=len(raw))
         except Exception as e:
             return ProviderResult(self.source, status="error", reason=f"error: {e}")

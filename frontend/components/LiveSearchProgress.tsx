@@ -16,7 +16,11 @@ export function LiveSearchProgress({ job }: { job: LiveSearchJob }) {
         <div key={src} className="flex justify-between text-gray-700">
           <span>{src.toUpperCase()} {LABELS[p.status] ?? ""}</span>
           <span className="text-gray-500">
-            {p.status === "ok" ? `найдено ${p.found}` : p.reason || p.status}
+            {p.status === "ok"
+              ? p.saved != null && p.saved < p.found
+                ? `сохранено ${p.saved}/${p.found}`
+                : `найдено ${p.found}`
+              : p.reason || p.status}
           </span>
         </div>
       ))}

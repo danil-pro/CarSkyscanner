@@ -70,3 +70,24 @@ async def test_provider_timeout_marks_error():
     await asyncio.sleep(0.3)
     job = orch.get(job_id)
     assert job.per_source["olx"]["status"] == "error"
+
+
+@pytest.mark.asyncio
+async def test_job_timeout_marks_error():
+    class Slow:
+        source = "olx"
+
+        async def search(self, playwright):
+            await asyncio.sleep(10)
+            return ProviderResult("olx")
+
+    orch = SearchOrchestrator(
+        provider_factory=lambda f: [Slow()],
+        acquire_playwright=lambda: FakePW(),
+        job_timeout_s=0.05,
+    )
+    job_id = orch.start(SearchFilters())
+    await asyncio.sleep(0.3)
+    job = orch.get(job_id)
+    assert job.status == "error"
+    assert "timeout" in (job.error or "")

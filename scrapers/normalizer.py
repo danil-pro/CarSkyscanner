@@ -121,8 +121,9 @@ def normalize(raw: dict) -> Optional[dict]:
         eb, em = extract_brand_model(raw.get("title"))
         brand = brand or eb
         model = model or em
+    title = _clean(raw.get("title")) or f"{brand} {model}".strip()
     return {
-        "title": _clean(raw.get("title")) or None,
+        "title": title,
         "brand": brand,
         "model": model,
         "year": parse_year(raw.get("year")),

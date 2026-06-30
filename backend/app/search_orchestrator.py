@@ -54,11 +54,13 @@ class SearchOrchestrator:
         self,
         provider_factory: Callable[[SearchFilters], list] = default_provider_factory,
         acquire_playwright: Callable[[], Awaitable] = _default_acquire_playwright,
-        provider_timeout_s: int = None,
+        provider_timeout_s: Optional[int] = None,
+        job_timeout_s: Optional[int] = None,
     ):
         self._provider_factory = provider_factory
         self._acquire_playwright = acquire_playwright
         self._provider_timeout_s = provider_timeout_s or settings.SEARCH_PROVIDER_TIMEOUT_S
+        self._job_timeout_s = job_timeout_s or settings.SEARCH_JOB_TIMEOUT_S
         self._jobs: dict[str, LiveSearchJob] = {}
 
     def start(self, filters: SearchFilters) -> str:
@@ -76,20 +78,28 @@ class SearchOrchestrator:
     async def _run(self, job: LiveSearchJob):
         providers = self._provider_factory(job.filters)
         try:
-            async with self._acquire_playwright() as pw:
-                async def run_one(p):
-                    try:
-                        res = await asyncio.wait_for(p.search(pw), timeout=self._provider_timeout_s)
-                    except asyncio.TimeoutError:
-                        res = ProviderResult(p.source, status="error", reason="timeout")
-                    except Exception as e:  # never let one provider sink the job
-                        res = ProviderResult(p.source, status="error", reason=f"error: {e}")
-                    job.per_source[p.source] = {
-                        "status": res.status, "found": res.found, "reason": res.reason,
-                    }
-                    return res
+            async def scrape():
+                async with self._acquire_playwright() as pw:
+                    async def run_one(p):
+                        try:
+                            res = await asyncio.wait_for(p.search(pw), timeout=self._provider_timeout_s)
+                        except asyncio.TimeoutError:
+                            res = ProviderResult(p.source, status="error", reason="timeout")
+                        except Exception as e:  # never let one provider sink the job
+                            res = ProviderResult(p.source, status="error", reason=f"error: {e}")
+                        job.per_source[p.source] = {
+                            "status": res.status, "found": res.found,
+                            "reason": res.reason, "saved": 0,
+                        }
+                        return res
+                    return await asyncio.gather(*(run_one(p) for p in providers))
 
-                results = await asyncio.gather(*(run_one(p) for p in providers))
+            try:
+                results = await asyncio.wait_for(scrape(), timeout=self._job_timeout_s)
+            except asyncio.TimeoutError:
+                job.status = "error"
+                job.error = "job timeout"
+                return
 
             collected = []
             db = SessionLocal()
@@ -98,6 +108,9 @@ class SearchOrchestrator:
                     for listing in res.listings:
                         try:
                             upsert_car(db, listing)
+                            if res.source in job.per_source:
+                                slot = job.per_source[res.source]
+                                slot["saved"] = slot.get("saved", 0) + 1
                         except Exception:
                             pass
                         collected.append(listing)
