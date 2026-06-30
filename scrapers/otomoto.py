@@ -1,9 +1,21 @@
 from urllib.parse import quote
+import re
 from playwright.async_api import Page
 from bs4 import BeautifulSoup
 from scrapers.base import BaseScraper, resolve_url, extract_image_url
 
 BASE_URL = "https://www.otomoto.pl"
+
+
+def _pick_year(dds: list[str]) -> str | None:
+    """Return the first <dd> that is a bare plausible year (e.g. '2018'), not a price/date slot."""
+    for d in dds:
+        s = d.strip()
+        if re.fullmatch(r"(19|20)\d{2}", s):
+            y = int(s)
+            if 1950 <= y <= 2030:  # loose bound; parse_year re-checks against today
+                return s
+    return None
 
 
 def parse_html(html: str) -> list[dict]:
@@ -21,7 +33,7 @@ def parse_html(html: str) -> list[dict]:
         out.append({
             "title": art.get_text(" ", strip=True)[:200],
             "brand": "", "model": "",
-            "year": dds[0] if len(dds) > 0 else None,
+            "year": _pick_year(dds),
             "price": price_dd.get_text(strip=True) if price_dd else None,
             "mileage": next((d for d in dds if "km" in d.lower()), None),
             "fuel_type": next((d for d in dds if d.lower() in ("benzyna", "diesel", "hybryda", "elektryczny", "lpg")), None),

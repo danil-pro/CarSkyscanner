@@ -100,3 +100,19 @@ def test_olx_parse_year_ignores_listing_date():
     """
     listings = parse_html(html)
     assert listings[0]["year"] == "2019"
+
+
+def test_otomoto_parse_year_picks_year_not_price():
+    from scrapers.otomoto import parse_html
+    # dd[0] is the price; the bare year '2008' is later. dds[0] used to win with a stray token.
+    html = """
+    <html><body>
+    <div data-testid="listing-ad">
+      <a href="/osobowe/peugeot-207-ID1.html"></a>
+      <span data-testid="ad-price">4 200 zł</span>
+      <dd>4 200 PLN</dd><dd>2008</dd><dd>Benzyna</dd><dd>Manualna</dd><dd>150 tys. km</dd><dd>Warszawa</dd>
+    </div>
+    </body></html>
+    """
+    listings = parse_html(html)
+    assert listings[0]["year"] == "2008"
