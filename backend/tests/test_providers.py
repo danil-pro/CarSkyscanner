@@ -33,7 +33,7 @@ def test_olx_parse_source_by_domain():
 
 def test_olx_provider_builds_filtered_url():
     p = OLXProvider(SearchFilters(brand="volkswagen"))
-    assert "search[filter_enum_make]=Volkswagen" in unquote(p.build_url())
+    assert "samochody/volkswagen/" in p.build_url()
     assert p.source == "olx"
 
 
