@@ -24,6 +24,13 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg2://carsky:carsky@postgres:5432/carsky
       AUTO_SEED: "true"
+      ENABLED_SOURCES: "olx,otomoto,facebook"
+      FB_STORAGE_STATE_PATH: "/app/secrets/fb_storage_state.json"
+      SEARCH_PROVIDER_TIMEOUT_S: "45"
+      SEARCH_JOB_TIMEOUT_S: "60"
+    volumes:
+      # FB session (storage_state.json) captured on host via scripts/fb_login.py
+      - ../backend/secrets:/app/secrets:ro
     depends_on:
       postgres:
         condition: service_healthy

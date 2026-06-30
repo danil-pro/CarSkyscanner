@@ -14,7 +14,10 @@ frontend/.env.local
 
 # Playwright / secrets
 storage_state.json
+*.storage_state.json
 .env
+backend/secrets/*
+!backend/secrets/.gitkeep
 
 # OS
 .DS_Store

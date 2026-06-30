@@ -1,0 +1,13 @@
+# Keep the FB session out of the image (provided via compose volume at runtime)
+backend/secrets/
+*.storage_state.json
+
+# Python build noise
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# VCS / editors
+.git/
+.idea/
+.vscode/
