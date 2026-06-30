@@ -104,6 +104,14 @@ class FacebookProvider(ListingProvider):
             if any(m in current for m in _LOGIN_MARKERS):
                 return ProviderResult(self.source, status="session-invalid",
                                       reason=f"redirected to {current}")
+            # Scroll to render lazy-loaded Marketplace items (otherwise found=0).
+            try:
+                for _ in range(6):
+                    await page.evaluate("window.scrollBy(0, window.innerHeight)")
+                    await page.wait_for_timeout(400)
+                await page.wait_for_load_state("networkidle", timeout=5000)
+            except Exception:
+                pass
             raw = [n for n in (normalize(r) for r in self._parse(await page.content())) if n]
             return ProviderResult(self.source, listings=raw, status="ok", found=len(raw))
         except Exception as e:
