@@ -6,8 +6,7 @@ from scrapers.filters import build_olx_url, build_otomoto_url, build_facebook_ur
 def test_olx_brand_and_price():
     url = build_olx_url(SearchFilters(brand="volkswagen", price_max=50000))
     dec = unquote(url)
-    assert url.startswith("https://www.olx.pl/motoryzacja/samochody/?")
-    assert "search[filter_enum_make]=Volkswagen" in dec
+    assert "https://www.olx.pl/motoryzacja/samochody/volkswagen/" in url
     assert "search[filter_float_price:to]=50000" in dec
 
 

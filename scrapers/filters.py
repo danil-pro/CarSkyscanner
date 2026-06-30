@@ -15,11 +15,15 @@ def _fuel_pl(value):
 
 
 def build_olx_url(f) -> str:
-    p = {}
+    # OLX encodes make/model as path segments (e.g. .../samochody/volkswagen/golf/),
+    # not query params; price/year/fuel stay as search[...] params.
+    parts = [OLX_BASE.rstrip("/")]
     if getattr(f, "brand", None):
-        p["search[filter_enum_make]"] = f.brand.capitalize()
+        parts.append(quote(f.brand))
     if getattr(f, "model", None):
-        p["search[filter_enum_model]"] = f.model.capitalize()
+        parts.append(quote(f.model))
+    path = "/".join(parts) + "/"
+    p = {}
     if f.price_min is not None:
         p["search[filter_float_price:from]"] = int(f.price_min)
     if f.price_max is not None:
@@ -30,7 +34,7 @@ def build_olx_url(f) -> str:
         p["search[filter_float_year:to]"] = f.year_max
     if getattr(f, "fuel_type", None):
         p["search[filter_enum_fuel]"] = _fuel_pl(f.fuel_type)
-    return f"{OLX_BASE}?{urlencode(p)}" if p else OLX_BASE
+    return f"{path}?{urlencode(p)}" if p else path
 
 
 def build_otomoto_url(f) -> str:
