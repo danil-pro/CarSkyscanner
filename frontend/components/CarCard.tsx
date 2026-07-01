@@ -1,9 +1,13 @@
+import Link from "next/link";
 import { Car } from "@/lib/api";
 import { SourceBadge } from "./SourceBadge";
 
 export function CarCard({ car }: { car: Car }) {
   return (
-    <div className="bg-white rounded-lg shadow p-3 flex gap-3">
+    <Link
+      href={`/cars/${car.id}`}
+      className="bg-white rounded-lg shadow p-3 flex gap-3 hover:shadow-md transition"
+    >
       {car.image_url ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -31,15 +35,7 @@ export function CarCard({ car }: { car: Car }) {
           {car.fuel_type} • {car.transmission}
         </p>
         <p className="text-sm text-gray-500">{car.location}</p>
-        <a
-          href={car.url}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-block mt-2 text-sm text-blue-600 hover:underline"
-        >
-          Открыть объявление →
-        </a>
       </div>
-    </div>
+    </Link>
   );
 }
