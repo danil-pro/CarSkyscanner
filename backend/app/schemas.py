@@ -61,3 +61,10 @@ class ScrapeStatus(BaseModel):
     finished_at: Optional[datetime] = None
     total_saved: int = 0
     per_source: dict[str, SourceResult] = {}
+
+
+class CarDetailsOut(BaseModel):
+    description: Optional[str] = None
+    images: list[str] = []
+    status: str
+    fetched_at: Optional[datetime] = None

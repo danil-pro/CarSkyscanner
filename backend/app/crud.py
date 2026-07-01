@@ -1,6 +1,7 @@
+from datetime import datetime, timezone
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
-from app.models import Car
+from app.models import Car, CarDetail
 
 
 def upsert_car(db: Session, data: dict) -> Car:
@@ -23,6 +24,26 @@ def upsert_car(db: Session, data: dict) -> Car:
 
 def get_car(db: Session, car_id) -> Car | None:
     return db.get(Car, car_id)
+
+
+def get_detail(db: Session, car_id) -> CarDetail | None:
+    return db.get(CarDetail, car_id)
+
+
+def upsert_detail(db: Session, car_id, data: dict) -> CarDetail:
+    d = db.get(CarDetail, car_id)
+    if d is None:
+        d = CarDetail(car_id=car_id, description=data.get("description"),
+                      images=data.get("images"), status=data.get("status", "ok"))
+        db.add(d)
+    else:
+        d.description = data.get("description")
+        d.images = data.get("images")
+        d.status = data.get("status", "ok")
+        d.fetched_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(d)
+    return d
 
 
 def _apply(filters, q):

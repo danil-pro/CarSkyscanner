@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     SEARCH_PROVIDER_TIMEOUT_S: int = 45
     SEARCH_JOB_TIMEOUT_S: int = 60
 
+    # Detail fetch cache
+    DETAILS_TTL_S: int = 43200  # 12h cache for scraped listing details
+
     @property
     def enabled_sources(self) -> list[str]:
         return [s.strip() for s in self.ENABLED_SOURCES.split(",") if s.strip()]
