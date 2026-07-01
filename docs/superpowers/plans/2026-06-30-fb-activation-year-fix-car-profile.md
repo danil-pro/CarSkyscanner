@@ -35,10 +35,12 @@
 Append to `backend/tests/test_normalizer.py`:
 ```python
 def test_parse_year_rejects_future_years():
-    # 2027 is future relative to now_year=2026 -> rejected
-    assert parse_year("2027", now_year=2026) is None
+    # Guard rejects years beyond next model year (now_year + 1): 2028 and 2099 are future.
+    assert parse_year("2028", now_year=2026) is None
     assert parse_year("2099", now_year=2026) is None
-    # current year is allowed (proves the guard alone does NOT fix the 2026 date bug)
+    # now_year + 1 (2027) is allowed — a plausible next-year model. now_year (2026) is allowed too.
+    # (This proves the guard alone does NOT fix the 2026 date bug — anchoring in Tasks 2-3 does.)
+    assert parse_year("2027", now_year=2026) == 2027
     assert parse_year("2026", now_year=2026) == 2026
     assert parse_year("2019", now_year=2026) == 2019
     assert parse_year(None) is None
