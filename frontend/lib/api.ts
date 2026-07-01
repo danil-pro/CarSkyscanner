@@ -29,7 +29,9 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const getCars = (limit = 100, offset = 0) =>
   req<SearchResponse>(`/cars?limit=${limit}&offset=${offset}`);
+export interface CarDetails { description: string | null; images: string[]; status: string; fetched_at: string | null; }
 export const getCar = (id: string) => req<Car>(`/cars/${id}`);
+export const getCarDetails = (id: string) => req<CarDetails>(`/cars/${id}/details`);
 export const searchCars = (f: Filters) =>
   req<SearchResponse>("/search", { method: "POST", body: JSON.stringify(f) });
 export const runScrape = () => req<{ job_id: string; status: string }>("/scrape/run", { method: "POST" });

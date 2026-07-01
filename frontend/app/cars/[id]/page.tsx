@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Car } from "@/lib/api";
 import { SourceBadge } from "@/components/SourceBadge";
+import { DetailsPanel } from "@/components/DetailsPanel";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -44,6 +45,7 @@ export default async function CarProfile({ params }: { params: { id: string } })
           </a>
         </div>
       </div>
+      <DetailsPanel carId={params.id} />
     </main>
   );
 }
