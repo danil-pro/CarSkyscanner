@@ -1,8 +1,8 @@
 # CarSkyscanner
 
 Car listing aggregator MVP for the Polish market. It pulls car listings from
-**Otomoto** and **OLX** (live, via Playwright), plus a **Facebook Marketplace**
-stub, normalizes them into a single schema, stores them in PostgreSQL, and
+**Otomoto** and **OLX** (live, via Playwright), plus **Facebook Marketplace**
+(live via a saved login session), normalizes them into a single schema, stores them in PostgreSQL, and
 exposes a filtered search through a FastAPI backend and a Next.js frontend.
 
 The full design spec lives in
@@ -16,7 +16,7 @@ The full design spec lives in
                        ┌───────────────┐
    Otomoto (Playwright)│               │
    OLX      (Playwright)│  scrapers/    │  raw HTML/listings
-   Facebook (stub)     │  base/otomoto/│ ──────────────┐
+   Facebook (live)     │  base/otomoto/│ ──────────────┐
                        │  olx/facebook │               ▼
                        └───────┬───────┘        ┌─────────────┐
                                │                │ normalizer  │ → normalized dict
@@ -45,7 +45,7 @@ The full design spec lives in
 
 | Layer | Path | Responsibility |
 |-------|------|----------------|
-| Scrapers | `scrapers/` | `BaseScraper` (Playwright launch, block detection), `otomoto.py`, `olx.py`, `facebook.py` (stub), `normalizer.py` (raw → canonical dict) |
+| Scrapers | `scrapers/` | `BaseScraper` (Playwright launch, block detection), `otomoto.py`, `olx.py`, `facebook.py` (live via /search/live), `normalizer.py` (raw → canonical dict) |
 | Runner | `backend/app/scraper_runner.py` | `ScrapeJobManager` — single in-memory async job, per-source counters, `idle\|running\|done\|error` lifecycle |
 | API | `backend/app/routers/` | `cars.py` (`/cars`, `/search`), `scrape.py` (`/scrape/run`, `/scrape/status`) |
 | Persistence | `backend/app/models.py`, `crud.py`, `database.py` | SQLAlchemy `Car` model, `upsert_car` (dedupe by source+url), filtered search |
@@ -158,9 +158,12 @@ python -m playwright install chromium
   (`BLOCKED_MARKERS`, HTTP >= 400), and a blocked source simply reports
   `blocked: 1` without failing the job. **Seed data** (40 demo cars) guarantees
   the app is always browsable, even when every live source is blocked.
-- **Facebook Marketplace is a stub.** It requires an authenticated session,
-  which is out of MVP scope. `FacebookScraper.run()` always returns
-  `blocked=True, reason="login required (stub)"`.
+- **Facebook Marketplace needs a saved login session.** It is live via
+  `/search/live` using a Playwright `storage_state.json` captured by
+  `python scripts/fb_login.py` in a headed browser (the operator completes any
+  2FA). Without the session file the source reports `session-not-configured`;
+  an expired session reports `session-invalid` (re-run `fb_login.py`). The
+  legacy `FacebookScraper` (manual `/scrape` flow) remains a no-op stub.
 - **CSS selectors may need updates.** Otomoto/OLX markup changes over time. If a
   source returns `found: 0` without being blocked, the selectors in
   `scrapers/otomoto.py` / `scrapers/olx.py` likely need refreshing; the
@@ -176,7 +179,7 @@ python -m playwright install chromium
   backend resets state to `idle` (no persistent job log).
 - **No scheduling.** Scrapes are manual-only (UI button or API call); there is
   no cron/periodic trigger.
-- **No real Facebook data** (stub only — see Risks).
+- **Facebook data needs a saved session** (captured via `scripts/fb_login.py`; see Risks).
 - **`total` reflects the DB at query time** — it is not snapshot-isolated under
   concurrent writes.
 - **CORS is open (`allow_origins=["*"]`)** — fine for a local MVP, must be
