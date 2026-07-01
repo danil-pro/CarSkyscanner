@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, Query
+import uuid
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app import crud, schemas
@@ -19,3 +20,11 @@ def search(filters: schemas.SearchFilters,
            db: Session = Depends(get_db)):
     rows, total = crud.search_cars(db, filters, limit=limit, offset=offset)
     return {"items": rows, "total": total, "limit": limit, "offset": offset}
+
+
+@router.get("/cars/{car_id}", response_model=schemas.CarOut)
+def get_car(car_id: uuid.UUID, db: Session = Depends(get_db)):
+    car = crud.get_car(db, car_id)
+    if car is None:
+        raise HTTPException(status_code=404, detail="car not found")
+    return car

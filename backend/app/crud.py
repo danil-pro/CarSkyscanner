@@ -21,6 +21,10 @@ def upsert_car(db: Session, data: dict) -> Car:
     return car
 
 
+def get_car(db: Session, car_id) -> Car | None:
+    return db.get(Car, car_id)
+
+
 def _apply(filters, q):
     if filters.brand:
         b = f"%{filters.brand.strip()}%"
