@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import String, Integer, Numeric, Index, Uuid
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import String, Integer, Numeric, Index, Uuid, Text, ForeignKey, JSON
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
 
@@ -29,6 +29,8 @@ class Car(Base):
     image_url: Mapped[str] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=_now, nullable=False)
 
+    details: Mapped["CarDetail"] = relationship(back_populates="car", uselist=False, cascade="all, delete-orphan")
+
     __table_args__ = (
         Index("ix_cars_brand", "brand"),
         Index("ix_cars_model", "model"),
@@ -36,3 +38,14 @@ class Car(Base):
         Index("ix_cars_year", "year"),
         Index("uq_cars_source_url", "source", "url", unique=True),
     )
+
+
+class CarDetail(Base):
+    __tablename__ = "car_details"
+    car_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("cars.id"), primary_key=True)
+    description: Mapped[str] = mapped_column(Text, nullable=True)
+    images: Mapped[list] = mapped_column(JSON, nullable=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="ok")
+    fetched_at: Mapped[datetime] = mapped_column(default=_now, nullable=False)
+
+    car: Mapped["Car"] = relationship(back_populates="details")

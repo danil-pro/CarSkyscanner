@@ -1,6 +1,7 @@
 from datetime import datetime
 from app.database import SessionLocal
-from app.models import Car
+from app.models import Car, CarDetail
+from app import crud
 
 
 def test_car_can_be_inserted_and_queried():
@@ -19,5 +20,22 @@ def test_car_can_be_inserted_and_queried():
         rows = db.query(Car).all()
         assert len(rows) == 1
         assert rows[0].brand == "volkswagen"
+    finally:
+        db.close()
+
+
+def test_car_detail_roundtrip():
+    db = SessionLocal()
+    try:
+        car = crud.upsert_car(db, {"title": "X", "brand": "vw", "model": "golf",
+                                   "year": 2019, "price": 1000, "currency": "PLN",
+                                   "source": "olx", "url": "https://olx.pl/d/d1"})
+        d = CarDetail(car_id=car.id, description="Idealny stan", images=["a.jpg", "b.jpg"], status="ok")
+        db.add(d)
+        db.commit()
+        got = db.get(CarDetail, car.id)
+        assert got is not None
+        assert got.description == "Idealny stan"
+        assert got.images == ["a.jpg", "b.jpg"]
     finally:
         db.close()
