@@ -42,7 +42,11 @@ services:
       context: ..
       dockerfile: docker/Dockerfile.frontend
     environment:
+      # Browser-facing: host port 8000 -> backend container.
       NEXT_PUBLIC_API_URL: http://localhost:8000
+      # Server Components (SSR) run inside this container, where localhost:8000
+      # is NOT the backend. Use the internal compose hostname instead.
+      API_URL_INTERNAL: http://backend:8000
     depends_on:
       - backend
     ports:

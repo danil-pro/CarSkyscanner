@@ -3,12 +3,27 @@ import { Car } from "@/lib/api";
 import { SourceBadge } from "@/components/SourceBadge";
 import { DetailsPanel } from "@/components/DetailsPanel";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+// Server Components execute inside the frontend container, where `localhost:8000`
+// is the frontend container itself, NOT the backend (a separate container). So
+// server-side fetches must use the internal container-to-container URL; the
+// browser keeps using NEXT_PUBLIC_API_URL (host port -> backend). Locally
+// (next dev, no Docker) both resolve to the same default.
+const API =
+  process.env.API_URL_INTERNAL ??
+  process.env.NEXT_PUBLIC_API_URL ??
+  "http://localhost:8000";
 
 async function fetchCar(id: string): Promise<Car | null> {
-  const r = await fetch(`${API}/cars/${id}`, { cache: "no-store" });
-  if (!r.ok) return null;
-  return r.json();
+  try {
+    const r = await fetch(`${API}/cars/${id}`, { cache: "no-store" });
+    if (!r.ok) return null;
+    return r.json();
+  } catch {
+    // Backend unreachable — degrade to 404 instead of an unhandled
+    // "server-side exception". The internal-URL fix above is the real cure;
+    // this just keeps a transient outage from crashing the whole page.
+    return null;
+  }
 }
 
 export default async function CarProfile({ params }: { params: { id: string } }) {
