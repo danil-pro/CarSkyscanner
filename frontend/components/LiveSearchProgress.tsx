@@ -3,7 +3,8 @@ import type { LiveSearchJob } from "@/lib/api";
 
 const LABELS: Record<string, string> = {
   ok: "✓", blocked: "⛔", error: "✗",
-  "session-invalid": "🔒", "session-not-configured": "🔒", pending: "…",
+  "session-invalid": "🔒", "session-not-configured": "🔒",
+  "no-results": "⚠", pending: "…",
 };
 
 export function LiveSearchProgress({ job }: { job: LiveSearchJob }) {

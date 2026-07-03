@@ -79,6 +79,18 @@ class FacebookProvider(ListingProvider):
             })
         return out
 
+    @staticmethod
+    def _summarize(raw: list[dict]) -> ProviderResult:
+        # A valid session that yields zero item links almost always means FB
+        # changed its DOM or returned nothing for this location/query. Surface
+        # that as a distinct status instead of a bare, ambiguous "ok / found 0".
+        if raw:
+            return ProviderResult("facebook", listings=raw, status="ok", found=len(raw))
+        return ProviderResult(
+            "facebook", status="no-results",
+            reason="0 result links parsed — FB layout changed or no results for this location/query",
+        )
+
     async def search(self, playwright: Playwright) -> ProviderResult:
         if not self.storage_state_path or not os.path.exists(self.storage_state_path):
             return ProviderResult(self.source, status="session-not-configured",
@@ -113,7 +125,7 @@ class FacebookProvider(ListingProvider):
             except Exception:
                 pass
             raw = [n for n in (normalize(r) for r in self._parse(await page.content())) if n]
-            return ProviderResult(self.source, listings=raw, status="ok", found=len(raw))
+            return self._summarize(raw)
         except Exception as e:
             return ProviderResult(self.source, status="error", reason=f"error: {e}")
         finally:
