@@ -34,12 +34,14 @@ def upsert_detail(db: Session, car_id, data: dict) -> CarDetail:
     d = db.get(CarDetail, car_id)
     if d is None:
         d = CarDetail(car_id=car_id, description=data.get("description"),
-                      images=data.get("images"), status=data.get("status", "ok"))
+                      images=data.get("images"), status=data.get("status", "ok"),
+                      specs=data.get("specs") or {})
         db.add(d)
     else:
         d.description = data.get("description")
         d.images = data.get("images")
         d.status = data.get("status", "ok")
+        d.specs = data.get("specs") or {}
         d.fetched_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(d)

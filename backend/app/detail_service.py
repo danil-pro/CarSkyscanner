@@ -45,6 +45,6 @@ def fetch_details(car, fetcher: Optional[Callable] = None) -> dict:
     try:
         out = f(car)
         return {"description": out.get("description"), "images": out.get("images") or [],
-                "status": out.get("status", "ok")}
+                "specs": out.get("specs") or {}, "status": out.get("status", "ok")}
     except Exception:
         return {"description": None, "images": [], "status": "unavailable"}

@@ -107,11 +107,11 @@ def test_otomoto_parse_year_picks_year_not_price():
     # dd[0] is the price; the bare year '2008' is later. dds[0] used to win with a stray token.
     html = """
     <html><body>
-    <div data-testid="listing-ad">
-      <a href="/osobowe/peugeot-207-ID1.html"></a>
-      <span data-testid="ad-price">4 200 zł</span>
+    <article>
+      <a href="/osobowe/oferta/peugeot-207-ID1.html"></a>
+      <h3>4 200</h3>
       <dd>4 200 PLN</dd><dd>2008</dd><dd>Benzyna</dd><dd>Manualna</dd><dd>150 tys. km</dd><dd>Warszawa</dd>
-    </div>
+    </article>
     </body></html>
     """
     listings = parse_html(html)

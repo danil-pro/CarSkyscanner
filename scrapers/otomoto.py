@@ -18,27 +18,42 @@ def _pick_year(dds: list[str]) -> str | None:
     return None
 
 
+def _location(art) -> str | None:
+    # Otomoto renders "<city> (<region>)" in a <p>/<li>, separate from the <dd> specs.
+    for el in art.select("p, li"):
+        t = el.get_text(" ", strip=True)
+        if "(" in t and ")" in t and len(t) < 60:
+            return t
+    return None
+
+
 def parse_html(html: str) -> list[dict]:
     soup = BeautifulSoup(html, "html.parser")
     out = []
-    for art in soup.select('[data-testid="listing-ad"]'):
-        a = art.select_one("a[href]")
+    # Current Otomoto listing cards are plain <article> with an /oferta/ link
+    # (the old [data-testid="listing-ad"] only matches a handful now -> 0 results).
+    for art in soup.select("article"):
+        a = art.select_one('a[href*="/oferta/"]')
         if not a:
             continue
         url = resolve_url(BASE_URL, a["href"])
         if not url:
             continue
         dds = [d.get_text(strip=True) for d in art.select("dd")]
-        price_dd = art.select_one('[data-testid="ad-price"]')
+        h2 = art.select_one("h2")
+        h3 = art.select_one("h3")          # price lives in an <h3> on current Otomoto cards
+        # The offer link's own text is the clean listing title; <h2> on some
+        # (promoted) cards also bundles the model line + price, so prefer the link.
+        title = a.get_text(" ", strip=True) or (h2.get_text(" ", strip=True) if h2 else "")
         out.append({
-            "title": art.get_text(" ", strip=True)[:200],
+            "title": title[:200],
             "brand": "", "model": "",
             "year": _pick_year(dds),
-            "price": price_dd.get_text(strip=True) if price_dd else None,
+            "price": h3.get_text(strip=True) if h3 else None,
             "mileage": next((d for d in dds if "km" in d.lower()), None),
             "fuel_type": next((d for d in dds if d.lower() in ("benzyna", "diesel", "hybryda", "elektryczny", "lpg")), None),
             "transmission": next((d for d in dds if d.lower() in ("manualna", "automatyczna")), None),
-            "location": dds[-1] if dds else None,
+            "location": _location(art),
             "source": "otomoto",
             "url": url,
             "image_url": extract_image_url(art, BASE_URL),

@@ -21,3 +21,9 @@ def get_db():
 def init_db() -> None:
     import app.models  # noqa: F401  ensure model is registered
     Base.metadata.create_all(bind=engine)
+    # create_all won't add columns to an existing table (no Alembic in this
+    # project), so add new columns idempotently on Postgres.
+    if engine.dialect.name == "postgresql":
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE car_details ADD COLUMN IF NOT EXISTS specs JSON"))

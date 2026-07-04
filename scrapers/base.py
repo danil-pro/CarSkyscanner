@@ -38,20 +38,29 @@ def resolve_url(base: str, href: Optional[str]) -> Optional[str]:
     return urljoin(base.rstrip("/") + "/", href)
 
 
+# OLX and Otomoto both serve car photos from the apollo.olxcdn.com CDN. App-store
+# badges, site logos and UI icons live on other hosts, so restricting to this host
+# is what keeps App Store / Google Play images (and the Otomoto logo) out of cards
+# and galleries.
+_CAR_IMG_HOSTS = ("apollo.olxcdn.com",)
+
+
+def is_car_image(url: Optional[str]) -> bool:
+    return bool(url) and any(h in url.lower() for h in _CAR_IMG_HOSTS)
+
+
 def extract_image_url(card, base: str) -> Optional[str]:
-    """Pick a real <img> source from a card, preferring lazy-load attributes."""
-    img = card.select_one("img")
-    if not img:
-        return None
-    for attr in ("src", "data-src", "data-lazy-src"):
-        val = img.get(attr)
-        if val:
-            url = resolve_url(base, val.split(",")[0])
-            if url:
+    """First real car photo in a card (apollo.olxcdn), preferring lazy-load attrs."""
+    for img in card.select("img"):
+        for attr in ("src", "data-src", "data-lazy-src"):
+            url = resolve_url(base, (img.get(attr) or "").split(",")[0])
+            if is_car_image(url):
                 return url
-    srcset = img.get("srcset") or img.get("data-srcset")
-    if srcset:
-        return resolve_url(base, srcset.split(",")[0])
+        srcset = img.get("srcset") or img.get("data-srcset")
+        if srcset:
+            url = resolve_url(base, srcset.split(",")[0].split()[0])
+            if is_car_image(url):
+                return url
     return None
 
 

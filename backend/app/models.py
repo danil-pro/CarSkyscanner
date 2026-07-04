@@ -45,6 +45,7 @@ class CarDetail(Base):
     car_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("cars.id"), primary_key=True)
     description: Mapped[str] = mapped_column(Text, nullable=True)
     images: Mapped[list] = mapped_column(JSON, nullable=True)
+    specs: Mapped[dict] = mapped_column(JSON, nullable=True)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="ok")
     fetched_at: Mapped[datetime] = mapped_column(default=_now, nullable=False)
 

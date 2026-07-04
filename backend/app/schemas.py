@@ -64,7 +64,9 @@ class ScrapeStatus(BaseModel):
 
 
 class CarDetailsOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     description: Optional[str] = None
     images: list[str] = []
+    specs: dict = {}
     status: str
     fetched_at: Optional[datetime] = None
