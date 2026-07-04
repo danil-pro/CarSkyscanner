@@ -34,8 +34,10 @@ def _orch(providers):
 # running event loop — so these tests are async and run under pytest-asyncio.
 @pytest.mark.asyncio
 async def test_run_collects_and_marks_done():
+    listing = {"title": "T", "brand": "vw", "model": "g", "year": 2020, "price": 1.0,
+               "currency": "PLN", "source": "olx", "url": "u1", "image_url": None}
     orch = _orch([
-        FakeProvider("olx", ProviderResult("olx", listings=[{"source": "olx", "url": "u1", "price": 1.0}], found=1)),
+        FakeProvider("olx", ProviderResult("olx", listings=[listing], found=1)),
         FakeProvider("otomoto", ProviderResult("otomoto", status="blocked", reason="datadome")),
     ])
     job_id = orch.start(SearchFilters())
@@ -45,6 +47,9 @@ async def test_run_collects_and_marks_done():
     assert job.per_source["olx"]["status"] == "ok"
     assert job.per_source["otomoto"]["status"] == "blocked"
     assert job.results is not None and len(job.results) == 1
+    # Results must be saved Cars with an id — raw listing dicts (no id) produced
+    # /cars/undefined links.
+    assert "id" in job.results[0]
 
 
 def test_unknown_job_returns_none():

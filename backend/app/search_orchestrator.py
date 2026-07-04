@@ -6,7 +6,7 @@ from typing import Awaitable, Callable, Optional
 from app.config import settings
 from app.crud import upsert_car
 from app.database import SessionLocal
-from app.schemas import SearchFilters
+from app.schemas import CarOut, SearchFilters
 from scrapers.providers import OLXProvider, OtomotoProvider, ProviderResult
 from scrapers.facebook import FacebookProvider
 
@@ -107,13 +107,18 @@ class SearchOrchestrator:
                 for res in results:
                     for listing in res.listings:
                         try:
-                            upsert_car(db, listing)
-                            if res.source in job.per_source:
-                                slot = job.per_source[res.source]
-                                slot["saved"] = slot.get("saved", 0) + 1
+                            saved = upsert_car(db, listing)
                         except Exception:
-                            pass
-                        collected.append(listing)
+                            # Un-savable listing: skip it. It has no DB id, so the
+                            # frontend couldn't open it anyway (this was producing
+                            # /cars/undefined links -> 404).
+                            continue
+                        if res.source in job.per_source:
+                            slot = job.per_source[res.source]
+                            slot["saved"] = slot.get("saved", 0) + 1
+                        # Return the saved Car (with id), not the raw listing dict
+                        # (which lacks id and produced /cars/undefined links).
+                        collected.append(CarOut.model_validate(saved).model_dump(mode="json"))
             finally:
                 db.close()
             job.results = collected
