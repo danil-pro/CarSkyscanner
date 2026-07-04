@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { Car } from "@/lib/api";
 import { SourceBadge } from "@/components/SourceBadge";
 import { DetailsPanel } from "@/components/DetailsPanel";
+import { BackLink } from "@/components/BackLink";
 import { placeholderFor } from "@/lib/placeholder";
 
 // Server Components execute inside the frontend container, where `localhost:8000`
@@ -33,7 +34,7 @@ export default async function CarProfile({ params }: { params: { id: string } })
 
   return (
     <main className="max-w-3xl mx-auto p-4 space-y-4">
-      <a href="/" className="text-sm text-blue-600 hover:underline">← Назад к поиску</a>
+      <BackLink label="← Назад к поиску" />
       <div className="bg-white rounded-lg shadow p-4 flex flex-col md:flex-row gap-4">
         {car.image_url ? (
           // eslint-disable-next-line @next/next/no-img-element

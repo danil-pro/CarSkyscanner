@@ -34,6 +34,24 @@ export const getCar = (id: string) => req<Car>(`/cars/${id}`);
 export const getCarDetails = (id: string) => req<CarDetails>(`/cars/${id}/details`);
 export const searchCars = (f: Filters) =>
   req<SearchResponse>("/search", { method: "POST", body: JSON.stringify(f) });
+
+// Filters <-> URL query, so the /search page is URL-driven and survives
+// navigation/refresh (search results no longer vanish when you open a car).
+export function filtersToQuery(f: Filters): string {
+  const p = new URLSearchParams();
+  for (const [k, v] of Object.entries(f))
+    if (v !== undefined && v !== null && v !== "") p.set(k, String(v));
+  return p.toString();
+}
+export function queryToFilters(sp: URLSearchParams): Filters {
+  const s = (k: string) => sp.get(k) || undefined;
+  const n = (k: string) => (sp.get(k) ? Number(sp.get(k)) : undefined);
+  return {
+    brand: s("brand"), model: s("model"), year_min: n("year_min"), year_max: n("year_max"),
+    price_min: n("price_min"), price_max: n("price_max"), mileage_max: n("mileage_max"),
+    fuel_type: s("fuel_type"), transmission: s("transmission"),
+  };
+}
 export const runScrape = () => req<{ job_id: string; status: string }>("/scrape/run", { method: "POST" });
 export const getScrapeStatus = () => req<ScrapeStatus>("/scrape/status");
 
