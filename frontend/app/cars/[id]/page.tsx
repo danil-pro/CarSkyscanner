@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { Car } from "@/lib/api";
 import { SourceBadge } from "@/components/SourceBadge";
 import { DetailsPanel } from "@/components/DetailsPanel";
+import { placeholderFor } from "@/lib/placeholder";
 
 // Server Components execute inside the frontend container, where `localhost:8000`
 // is the frontend container itself, NOT the backend (a separate container). So
@@ -38,7 +39,8 @@ export default async function CarProfile({ params }: { params: { id: string } })
           // eslint-disable-next-line @next/next/no-img-element
           <img src={car.image_url} alt={car.title ?? ""} className="w-full md:w-80 h-60 object-cover rounded bg-gray-200" />
         ) : (
-          <div className="w-full md:w-80 h-60 rounded bg-gray-100 flex items-center justify-center text-gray-400">Нет фото</div>
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={placeholderFor(params.id)} alt={car.title ?? ""} className="w-full md:w-80 h-60 object-cover rounded bg-gray-100" />
         )}
         <div className="flex-1 space-y-2">
           <div className="flex justify-between items-start gap-2">

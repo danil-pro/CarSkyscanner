@@ -22,6 +22,21 @@ export function DetailsPanel({ carId }: { carId: string }) {
   }
   return (
     <div className="space-y-3">
+      {Object.keys(d.specs).length > 0 && (
+        <div>
+          <h2 className="font-semibold mb-1">Характеристики</h2>
+          <table className="text-sm w-full">
+            <tbody>
+              {Object.entries(d.specs).map(([k, v]) => (
+                <tr key={k}>
+                  <td className="text-gray-500 pr-4 align-top w-1/3">{k}</td>
+                  <td>{v}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
       {d.description && (
         <div>
           <h2 className="font-semibold mb-1">Описание</h2>

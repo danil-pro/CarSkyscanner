@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Car } from "@/lib/api";
 import { SourceBadge } from "./SourceBadge";
+import { placeholderFor } from "@/lib/placeholder";
 
 export function CarCard({ car }: { car: Car }) {
   return (
@@ -16,9 +17,12 @@ export function CarCard({ car }: { car: Car }) {
           className="w-32 h-24 object-cover rounded bg-gray-200 shrink-0"
         />
       ) : (
-        <div className="w-32 h-24 rounded bg-gray-100 shrink-0 flex items-center justify-center text-gray-400 text-xs text-center px-1">
-          Нет фото
-        </div>
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={placeholderFor(car.id)}
+          alt={car.title ?? `${car.brand} ${car.model}`}
+          className="w-32 h-24 object-cover rounded bg-gray-100 shrink-0"
+        />
       )}
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-start gap-2">
