@@ -5,12 +5,14 @@ def test_parse_olx_detail():
     html = """
     <html><body>
       <div data-cy="ad_description"><p>Auto w stanie idealnym. Pierwszy właściciel.</p></div>
-      <img data-src="https://ireland.apollo.olxcdn.com/a.jpg"/>
-      <img data-src="https://ireland.apollo.olxcdn.com/b.jpg"/>
+      <div class="swiper-zoom-container"><img data-src="https://ireland.apollo.olxcdn.com/a.jpg"/></div>
+      <div class="swiper-zoom-container"><img data-src="https://ireland.apollo.olxcdn.com/b.jpg"/></div>
+      <div class="css-gl6djm"><img data-src="https://ireland.apollo.olxcdn.com/recommended.jpg"/></div>
     </body></html>
     """
     out = parse_detail("olx", html, "https://www.olx.pl")
     assert "idealnym" in (out["description"] or "").lower()
+    # Only the gallery images — not the "Zobacz też" recommended-section one.
     assert out["images"] == ["https://ireland.apollo.olxcdn.com/a.jpg", "https://ireland.apollo.olxcdn.com/b.jpg"]
 
 

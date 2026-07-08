@@ -73,9 +73,20 @@ def _specs_otomoto(soup) -> dict:
 
 def _parse_olx(html: str, base_url: str) -> dict:
     soup = BeautifulSoup(html, "html.parser")
+    # Scope photos to the gallery (.swiper-zoom-container). The detail page also
+    # has a "Zobacz też" recommended section whose apollo images are unrelated
+    # listings (other cars, sometimes other categories) — including them is what
+    # showed t-shirts / bicycles / other cars in the gallery.
+    gallery = soup.select(".swiper-zoom-container")
+    images, seen = [], set()
+    for node in (gallery or [soup]):
+        for u in _images(node, base_url):
+            if u not in seen:
+                seen.add(u)
+                images.append(u)
     return {
         "description": _description(soup, ('[data-cy="ad_description"]', 'div[aria-label="Opis"]', ".descriptioncontent")),
-        "images": _images(soup, base_url),
+        "images": images,
         "specs": _specs_olx(soup),
     }
 
