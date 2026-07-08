@@ -24,6 +24,25 @@ def _images(soup, base_url: str) -> list[str]:
     return out
 
 
+def _gallery_images(soup, base_url: str, gallery_selectors: tuple[str, ...]) -> list[str]:
+    """Photos scoped to the listing's gallery. The detail page also shows a
+    'similar/recommended' section (Otomoto: similar-ads-section; OLX: Zobacz też)
+    whose apollo images are unrelated listings — scope to the gallery only,
+    falling back to the whole page when no gallery container is found."""
+    for sel in gallery_selectors:
+        nodes = soup.select(sel)
+        if nodes:
+            images, seen = [], set()
+            for node in nodes:
+                for u in _images(node, base_url):
+                    if u not in seen:
+                        seen.add(u)
+                        images.append(u)
+            if images:
+                return images
+    return _images(soup, base_url)
+
+
 def _description(soup, selectors: tuple[str, ...]) -> Optional[str]:
     for sel in selectors:
         el = soup.select_one(sel)
@@ -73,20 +92,9 @@ def _specs_otomoto(soup) -> dict:
 
 def _parse_olx(html: str, base_url: str) -> dict:
     soup = BeautifulSoup(html, "html.parser")
-    # Scope photos to the gallery (.swiper-zoom-container). The detail page also
-    # has a "Zobacz też" recommended section whose apollo images are unrelated
-    # listings (other cars, sometimes other categories) — including them is what
-    # showed t-shirts / bicycles / other cars in the gallery.
-    gallery = soup.select(".swiper-zoom-container")
-    images, seen = [], set()
-    for node in (gallery or [soup]):
-        for u in _images(node, base_url):
-            if u not in seen:
-                seen.add(u)
-                images.append(u)
     return {
         "description": _description(soup, ('[data-cy="ad_description"]', 'div[aria-label="Opis"]', ".descriptioncontent")),
-        "images": images,
+        "images": _gallery_images(soup, base_url, (".swiper-zoom-container",)),
         "specs": _specs_olx(soup),
     }
 
@@ -116,7 +124,7 @@ def _parse_otomoto(html: str, base_url: str) -> dict:
     )) or _longest_text_block(soup)
     return {
         "description": desc,
-        "images": _images(soup, base_url),
+        "images": _gallery_images(soup, base_url, ('[data-testid="main-gallery"]', '[data-testid="photo-gallery"]')),
         "specs": _specs_otomoto(soup),
     }
 

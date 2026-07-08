@@ -73,3 +73,25 @@ def test_parse_otomoto_detail_description_fallback():
     out = parse_detail("otomoto", html, "https://www.otomoto.pl")
     assert out["description"] and "Na sprzedaz" in out["description"]
     assert "Pokaż pełny opis" not in (out["description"] or "")
+
+
+def test_parse_otomoto_detail_gallery_excludes_similar_ads():
+    # Gallery photos are in [data-testid="main-gallery"]; the similar-ads
+    # section must not leak into the gallery.
+    html = """
+    <html><body>
+      <div data-testid="main-gallery">
+        <img data-src="https://ireland.apollo.olxcdn.com/m1.jpg"/>
+        <img data-src="https://ireland.apollo.olxcdn.com/m2.jpg"/>
+      </div>
+      <div data-testid="similar-ads-section">
+        <img data-src="https://ireland.apollo.olxcdn.com/similar1.jpg"/>
+        <img data-src="https://ireland.apollo.olxcdn.com/similar2.jpg"/>
+      </div>
+    </body></html>
+    """
+    out = parse_detail("otomoto", html, "https://www.otomoto.pl")
+    assert out["images"] == [
+        "https://ireland.apollo.olxcdn.com/m1.jpg",
+        "https://ireland.apollo.olxcdn.com/m2.jpg",
+    ]
