@@ -103,10 +103,17 @@ def _longest_text_block(soup, min_len: int = 200, max_len: int = 6000) -> Option
 
 def _parse_otomoto(html: str, base_url: str) -> dict:
     soup = BeautifulSoup(html, "html.parser")
-    # Otomoto's description has no stable selector; fall back to the longest text
-    # block (the offer description) when the known selectors miss.
-    desc = _description(soup, ('[data-testid="content-container"]', 'div[data-role="offer-description"]', "#description")) \
-        or _longest_text_block(soup)
+    # Description lives in [data-testid="textWrapper"]; content-description-section
+    # also bundles the "Opis"/"Zgłoś" headings and the "Pokaż pełny opis" button,
+    # so prefer textWrapper. Longest-block is a last resort (it can grab legal/
+    # cookie text), hence last.
+    desc = _description(soup, (
+        '[data-testid="textWrapper"]',
+        '[data-testid="content-description-section"]',
+        '[data-testid="content-container"]',
+        'div[data-role="offer-description"]',
+        '#description',
+    )) or _longest_text_block(soup)
     return {
         "description": desc,
         "images": _images(soup, base_url),

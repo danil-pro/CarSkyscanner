@@ -60,15 +60,16 @@ def test_parse_olx_detail_extracts_specs():
 
 
 def test_parse_otomoto_detail_description_fallback():
-    # Otomoto's description has no stable selector; fall back to the longest
-    # text block when the known selectors miss.
+    # Otomoto's description is in [data-testid="textWrapper"]; the section
+    # wrapper also contains the "Pokaż pełny opis" button, which must be excluded.
     html = """
     <html><body>
-      <div data-testid="content-container"></div>
-      <div><p>Na sprzedaz oferuje samochod w bardzo dobrym stanie. Pierwszy wlasciciel,
+      <div data-testid="content-description-section"><h3>Opis</h3><button>Pokaż pełny opis</button></div>
+      <div data-testid="textWrapper"><p>Na sprzedaz oferuje samochod w bardzo dobrym stanie. Pierwszy wlasciciel,
       bezwypadkowy, regularnie serwisowany w autoryzowanym serwisie. Komplet kluczykow
       oraz dokumentow. Opony zimowe w komplecie. Mozliwosc finansowania.</p></div>
     </body></html>
     """
     out = parse_detail("otomoto", html, "https://www.otomoto.pl")
     assert out["description"] and "Na sprzedaz" in out["description"]
+    assert "Pokaż pełny opis" not in (out["description"] or "")
