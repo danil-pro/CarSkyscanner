@@ -80,10 +80,24 @@ def _parse_olx(html: str, base_url: str) -> dict:
     }
 
 
+def _longest_text_block(soup, min_len: int = 200, max_len: int = 6000) -> Optional[str]:
+    """Fallback description: the longest leaf-ish text block on the page."""
+    best = ""
+    for el in soup.find_all(["div", "section", "article"]):
+        t = el.get_text(" ", strip=True)
+        if min_len <= len(t) <= max_len and len(el.find_all(["div", "section"])) < 4 and len(t) > len(best):
+            best = t
+    return best[:5000] if best else None
+
+
 def _parse_otomoto(html: str, base_url: str) -> dict:
     soup = BeautifulSoup(html, "html.parser")
+    # Otomoto's description has no stable selector; fall back to the longest text
+    # block (the offer description) when the known selectors miss.
+    desc = _description(soup, ('[data-testid="content-container"]', 'div[data-role="offer-description"]', "#description")) \
+        or _longest_text_block(soup)
     return {
-        "description": _description(soup, ('[data-testid="content-container"]', 'div[data-role="offer-description"]', "#description")),
+        "description": desc,
         "images": _images(soup, base_url),
         "specs": _specs_otomoto(soup),
     }

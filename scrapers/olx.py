@@ -54,6 +54,7 @@ def parse_html(html: str) -> list[dict]:
 
 class OLXScraper(BaseScraper):
     source = "olx"
+    card_selector = '[data-cy="l-card"]'
 
     def build_url(self) -> str:
         return "https://www.olx.pl/motoryzacja/samochody/"

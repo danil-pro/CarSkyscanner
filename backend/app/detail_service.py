@@ -27,6 +27,18 @@ async def _fetch_via_playwright(car) -> dict:
         page = await ctx.new_page()
         try:
             await page.goto(car.url, timeout=45000, wait_until="domcontentloaded")
+            try:
+                await page.wait_for_load_state("networkidle", timeout=8000)
+            except Exception:
+                pass
+            # Render lazy content (description, gallery) before reading HTML —
+            # Otomoto/OLX load these after domcontentloaded.
+            for _ in range(4):
+                try:
+                    await page.evaluate("window.scrollBy(0, window.innerHeight)")
+                    await page.wait_for_timeout(300)
+                except Exception:
+                    pass
             html = await page.content()
             return parse_detail(car.source, html, base)
         finally:

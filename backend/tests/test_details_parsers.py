@@ -55,3 +55,18 @@ def test_parse_olx_detail_extracts_specs():
     assert s.get("Moc silnika") == "110 KM"
     assert s.get("Marka") == "Opel"
     assert s.get("Kolor") == "Czerwony"
+
+
+def test_parse_otomoto_detail_description_fallback():
+    # Otomoto's description has no stable selector; fall back to the longest
+    # text block when the known selectors miss.
+    html = """
+    <html><body>
+      <div data-testid="content-container"></div>
+      <div><p>Na sprzedaz oferuje samochod w bardzo dobrym stanie. Pierwszy wlasciciel,
+      bezwypadkowy, regularnie serwisowany w autoryzowanym serwisie. Komplet kluczykow
+      oraz dokumentow. Opony zimowe w komplecie. Mozliwosc finansowania.</p></div>
+    </body></html>
+    """
+    out = parse_detail("otomoto", html, "https://www.otomoto.pl")
+    assert out["description"] and "Na sprzedaz" in out["description"]

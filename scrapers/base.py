@@ -88,6 +88,10 @@ async def _is_blocked(page: Page) -> tuple[bool, Optional[str]]:
 class BaseScraper(ABC):
     source: str = "base"
     timeout_ms: int = 30000
+    # CSS selector for listing cards; run() scrolls each into view so lazy
+    # thumbnails (OLX keeps a no_thumbnail.svg placeholder until viewport entry)
+    # actually load before the HTML is read.
+    card_selector: Optional[str] = None
 
     @abstractmethod
     def build_url(self) -> str: ...
@@ -134,6 +138,20 @@ class BaseScraper(ABC):
                 await page.wait_for_load_state("networkidle", timeout=5000)
             except Exception:
                 pass
+            # Bring each card into the viewport so lazy thumbnails swap in, then
+            # wait for images to finish loading. Without this OLX cards keep a
+            # no_thumbnail.svg placeholder and image_url comes back null.
+            if self.card_selector:
+                try:
+                    for cl in await page.locator(self.card_selector).all():
+                        try:
+                            await cl.scroll_into_view_if_needed(timeout=1500)
+                        except Exception:
+                            pass
+                    await page.wait_for_function(
+                        "() => [...document.images].every(i => i.complete)", timeout=8000)
+                except Exception:
+                    pass
             raw_items = await self.parse_page(page)
             listings = [n for n in (normalize(r) for r in raw_items) if n]
             return ScrapeResult(self.source, listings=listings)
