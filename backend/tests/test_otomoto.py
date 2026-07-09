@@ -24,3 +24,31 @@ def test_parse_fixture_extracts_two_listings():
     assert first["mileage"] == "99 995 km"
     assert "Warszawa" in first["location"]
     assert "apollo.olxcdn" in first["image_url"]
+
+
+def test_parse_skips_dealer_showcase_cards():
+    # "Wyróżniony Sprzedawca" cards bundle several listings (specs in <li>, no
+    # <dd>, multiple /oferta/ links) — they must be skipped, not emitted as a
+    # garbage entry with no year/fuel/transmission.
+    html = """
+    <html><body>
+    <article>
+      <h2><a href="/osobowe/oferta/real-ID1.html">Audi A4</a></h2>
+      <h3>45 000</h3>
+      <dd>210 000 km</dd><dd>Diesel</dd><dd>Automatyczna</dd><dd>2014</dd>
+      <p>Kraków (Małopolskie)</p>
+    </article>
+    <article>
+      <a href="/osobowe/oferta/showcase-ID2.html"></a>
+      <span>Wyróżniony Sprzedawca</span>
+      <a href="/osobowe/oferta/sub-ID3.html">Volkswagen California</a>
+      <li>2025</li><li>11 km</li><li>Diesel</li>
+      <p>339 990 PLN</p>
+      <span>Zobacz ogłoszenia</span>
+    </article>
+    </body></html>
+    """
+    items = parse_html(html)
+    assert len(items) == 1
+    assert items[0]["title"] == "Audi A4"
+    assert all("showcase" not in i["url"] for i in items)

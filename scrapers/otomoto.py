@@ -40,6 +40,12 @@ def parse_html(html: str) -> list[dict]:
         if not url:
             continue
         dds = [d.get_text(strip=True) for d in art.select("dd")]
+        if not dds:
+            # "Wyróżniony Sprzedawca" dealer-showcase cards bundle several listings
+            # with specs in <li> (no <dd>) and multiple /oferta/ links — not a single
+            # listing. Skip them rather than emit a garbage entry (title+price from
+            # the first sub-listing, no year/fuel/transmission).
+            continue
         h2 = art.select_one("h2")
         h3 = art.select_one("h3")          # price lives in an <h3> on current Otomoto cards
         # The offer link's own text is the clean listing title; <h2> on some
