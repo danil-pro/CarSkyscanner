@@ -60,31 +60,51 @@ def test_facebook_not_configured(tmp_path):
     assert res.source == "facebook"
 
 
-def test_facebook_parses_item_links(tmp_path):
-    html = """
-    <html><body>
-      <a href="/marketplace/item/111/">Toyota Yaris 2019 · 50 000 zł</a>
-      <a href="/marketplace/item/222/">Honda Civic 2018 · 40 000 zł</a>
-    </body></html>
-    """
+def test_facebook_parses_listings_from_json(tmp_path):
+    # FB results live in embedded GraphQL JSON now, not <a> anchors.
+    payload = {
+        "data": {"marketplace_search": {"nodes": [
+            {"__typename": "GroupCommerceProductItem", "id": "111",
+             "marketplace_listing_title": "Toyota Yaris 2019",
+             "listing_price": {"formatted_amount": "50 000 zł"},
+             "primary_listing_photo": {"image": {"uri": "https://scontent.xx.fbcdn.net/a.jpg"}},
+             "location": {"reverse_geocode": {"city": "Warszawa"}}},
+            {"__typename": "GroupCommerceProductItem", "id": "222",
+             "marketplace_listing_title": "Honda Civic",
+             "listing_price": {"formatted_amount": "40 000 zł"},
+             "primary_listing_photo": {"image": {"uri": "https://scontent.xx.fbcdn.net/b.jpg"}},
+             "location": {"reverse_geocode": {"city": "Kraków"}}},
+        ]}}
+    }
+    import json as _json
+    html = f'<html><body><script type="application/json">{_json.dumps(payload)}</script></body></html>'
     p = FacebookProvider(SearchFilters(), storage_state_path=str(tmp_path / "x.json"))
     listings = p._parse(html)
     assert len(listings) == 2
     assert listings[0]["source"] == "facebook"
-    assert listings[0]["url"].startswith("https://www.facebook.com/marketplace/item/")
+    assert listings[0]["url"] == "https://www.facebook.com/marketplace/item/111/"
+    assert listings[0]["title"] == "Toyota Yaris 2019"
+    assert listings[0]["location"] == "Warszawa"
+    assert listings[0]["image_url"] == "https://scontent.xx.fbcdn.net/a.jpg"
 
 
 def test_facebook_parse_then_normalize_price(tmp_path):
-    # Regression: FB listings must go through normalize() so price/brand/model
-    # are parsed (raw "50 000" would otherwise fail the Numeric column).
+    # Regression: FB listings must go through normalize() so price is parsed
+    # (raw "50 000 zł" string -> 50000.0 for the Numeric column).
     from scrapers.normalizer import normalize
-    html = '<html><body><a href="/marketplace/item/9/">Toyota Yaris 2019 · 50 000 zł</a></body></html>'
+    import json as _json
+    payload = {"data": {"x": {"__typename": "GroupCommerceProductItem", "id": "9",
+        "marketplace_listing_title": "Toyota Yaris 2019",
+        "listing_price": {"formatted_amount": "50 000 zł"},
+        "primary_listing_photo": {"image": {"uri": "https://scontent.xx.fbcdn.net/c.jpg"}}}}}
+    html = f'<html><body><script type="application/json">{_json.dumps(payload)}</script></body></html>'
     p = FacebookProvider(SearchFilters(), storage_state_path=str(tmp_path / "x.json"))
     raw = p._parse(html)[0]
     n = normalize(raw)
     assert n is not None
     assert n["price"] == 50000.0
     assert n["source"] == "facebook"
+    assert n["url"] == "https://www.facebook.com/marketplace/item/9/"
 
 
 def test_olx_parse_year_ignores_listing_date():

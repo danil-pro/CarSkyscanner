@@ -1,3 +1,4 @@
+import json
 import os
 import re
 from typing import Optional
@@ -56,28 +57,67 @@ class FacebookProvider(ListingProvider):
         return build_facebook_url(self.filters)
 
     def _parse(self, html: str) -> list[dict]:
+        # FB no longer renders search results as <a href="/marketplace/item/">;
+        # the listings live in embedded GraphQL/relay JSON. Mine the <script>
+        # blobs for listing objects and build normalized-ish dicts from them.
         soup = BeautifulSoup(html, "html.parser")
-        out = []
-        for a in soup.select('a[href*="/marketplace/item/"]'):
-            href = a.get("href")
-            url = resolve_url(FB_BASE, href)
-            if not url:
+        raw: list[dict] = []
+        for s in soup.find_all("script"):
+            t = s.string or ""
+            if '"listing_price"' not in t and "GroupCommerceProductItem" not in t:
                 continue
-            text = a.get_text(" ", strip=True)
-            price = re.search(r"(\d[\d  ]*)\s*(?:zł|zl|PLN)", text)
-            year = re.search(r"(19|20)\d{2}", text)
-            out.append({
-                "title": text[:200] or None,
-                "brand": "", "model": "",
-                "year": year.group(0) if year else None,
-                "price": price.group(1) if price else None,
-                "mileage": None, "fuel_type": None, "transmission": None,
-                "location": None,
-                "source": "facebook",
-                "url": url,
-                "image_url": None,
-            })
+            try:
+                self._collect_listings(json.loads(t), raw)
+            except Exception:
+                continue
+            if len(raw) >= 50:
+                break
+        seen, out = set(), []
+        for l in raw:
+            lid = str(l.get("id") or "")
+            if not lid or lid in seen:
+                continue
+            seen.add(lid)
+            out.append(self._listing_to_dict(l))
         return out
+
+    @staticmethod
+    def _collect_listings(obj, out, depth=0):
+        if depth > 25 or len(out) >= 50:
+            return
+        if isinstance(obj, dict):
+            if "listing_price" in obj or obj.get("__typename") in (
+                "MarketplaceListing", "GroupCommerceProductItem"
+            ):
+                out.append(obj)
+                if len(out) >= 50:
+                    return
+            for v in obj.values():
+                FacebookProvider._collect_listings(v, out, depth + 1)
+        elif isinstance(obj, list):
+            for v in obj[:80]:
+                FacebookProvider._collect_listings(v, out, depth + 1)
+
+    @staticmethod
+    def _listing_to_dict(l: dict) -> dict:
+        lid = str(l.get("id") or "")
+        title = (l.get("marketplace_listing_title") or l.get("custom_title") or "").strip()
+        price = (l.get("listing_price") or {}).get("formatted_amount")
+        photo = (((l.get("primary_listing_photo") or {}).get("image") or {}).get("uri"))
+        geo = (l.get("location") or {}).get("reverse_geocode") or {}
+        location = geo.get("city") or ((geo.get("city_page") or {}).get("display_name"))
+        year = re.search(r"(19|20)\d{2}", title)
+        return {
+            "title": title[:200] or None,
+            "brand": "", "model": "",
+            "year": year.group(0) if year else None,
+            "price": price,
+            "mileage": None, "fuel_type": None, "transmission": None,
+            "location": location,
+            "source": "facebook",
+            "url": f"https://www.facebook.com/marketplace/item/{lid}/",
+            "image_url": photo,
+        }
 
     @staticmethod
     def _summarize(raw: list[dict]) -> ProviderResult:
