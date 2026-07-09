@@ -25,3 +25,9 @@ backend/secrets/*
 # Editor
 .idea/
 .vscode/
+
+# Claude Code (local tooling/state) — not part of the project
+.claude/
+
+# Stray root lockfile (no root package.json; the real one is frontend/package-lock.json)
+/package-lock.json
