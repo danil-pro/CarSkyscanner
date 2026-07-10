@@ -116,3 +116,29 @@ def test_parse_otomoto_detail_gallery_excludes_similar_ads():
         "https://ireland.apollo.olxcdn.com/m1.jpg",
         "https://ireland.apollo.olxcdn.com/m2.jpg",
     ]
+
+
+def test_parse_otomoto_detail_specs_from_section():
+    # Otomoto prints specs as ordered label/value leaf texts; pair known labels
+    # with the following text (includes Typ nadwozia = body type).
+    html = """
+    <html><body>
+      <div data-testid="combined-details-and-equipment-section">
+        <div>Szczegóły Podstawowe</div>
+        <div>Marka pojazdu</div><div>Peugeot</div>
+        <div>Rok produkcji</div><div>2009</div>
+        <div>Przebieg</div><div>107 000 km</div>
+        <div>Typ nadwozia</div><div>Kompakt</div>
+        <div>Skrzynia biegów</div><div>Manualna</div>
+        <div>Moc</div><div>95 KM</div>
+        <div>VIN</div><div>Wyświetl VIN</div>
+      </div>
+    </body></html>
+    """
+    out = parse_detail("otomoto", html, "https://www.otomoto.pl")
+    s = out["specs"]
+    assert s.get("Marka pojazdu") == "Peugeot"
+    assert s.get("Typ nadwozia") == "Kompakt"
+    assert s.get("Skrzynia biegów") == "Manualna"
+    assert s.get("Moc") == "95 KM"
+    assert "VIN" not in s

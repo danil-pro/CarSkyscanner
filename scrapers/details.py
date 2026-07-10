@@ -78,15 +78,29 @@ def _specs_olx(soup) -> dict:
     return specs
 
 
+_OTO_SPEC_LABELS = (
+    "Marka pojazdu", "Model pojazdu", "Rok produkcji", "Przebieg", "Rodzaj paliwa",
+    "Moc", "Pojemność skokowa", "Typ nadwozia", "Skrzynia biegów", "Napęd",
+    "Kolor", "Liczba drzwi", "Kraj pochodzenia", "Liczba miejsc",
+)
+
+
 def _specs_otomoto(soup) -> dict:
-    """Otomoto detail specs are <dt>label</dt><dd>value</dd> pairs (best-effort)."""
+    """Otomoto prints specs as label/value leaf texts in order inside the details
+    section; pair each known label with the text that follows it."""
+    sec = (soup.select_one('[data-testid="combined-details-and-equipment-section"]')
+           or soup.select_one('[data-testid="basic_information"]'))
+    if not sec:
+        return {}
+    texts: list[str] = []
+    for t in sec.find_all(string=True):
+        s = t.strip()
+        if s and s not in texts:
+            texts.append(s)
     specs: dict[str, str] = {}
-    for dt in soup.select("dt"):
-        dd = dt.find_next_sibling("dd")
-        if dd:
-            k, v = dt.get_text(" ", strip=True), dd.get_text(" ", strip=True)
-            if k and v and len(k) < 40 and len(v) < 60:
-                specs[k] = v
+    for i, txt in enumerate(texts):
+        if txt in _OTO_SPEC_LABELS and i + 1 < len(texts):
+            specs[txt] = texts[i + 1]
     return specs
 
 
