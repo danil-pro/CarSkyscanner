@@ -21,6 +21,27 @@ def test_parse_unknown_source_returns_empty_without_raising():
     assert out == {"description": None, "images": [], "specs": {}}
 
 
+def test_parse_facebook_detail_description_and_gallery():
+    html = """
+    <html><body>
+      <div><span>Написать продавцу</span></div>
+      <div><span>Информация о транспортном средстве</span></div>
+      <div><p>Sprzedam fajnego peugeota, auto zadbane godne polecenia, jestem pierwszym wlascicielem.
+      Przeglad i oc aktualne, olej wymieniony niedawno. Auto uzytkowane na co dzien, w dobrym stanie.
+      Wiecej info pod numerem telefonu, zapraszam.</p></div>
+      <img src="https://scontent-waw2-1.xx.fbcdn.net/x.jpg" alt='Фото товара "Peugeot"'/>
+      <img src="https://scontent-waw2-2.xx.fbcdn.net/y.jpg" alt="Фото товара"/>
+      <img src="https://scontent-waw2-1.xx.fbcdn.net/avatar.jpg" alt="Wojciech Serwin"/>
+    </body></html>
+    """
+    out = parse_detail("facebook", html, "https://www.facebook.com")
+    assert out["description"] and "Sprzedam" in out["description"]
+    assert "Написать продавцу" not in (out["description"] or "")
+    # gallery = 2 product photos (alt "Фото товара"), not the seller avatar
+    assert len(out["images"]) == 2
+    assert all("fbcdn.net" in u for u in out["images"])
+
+
 def test_parse_olx_detail_filters_non_car_images():
     # App Store / Google Play badges and site logos live on other hosts; only
     # real car photos (apollo.olxcdn) must end up in the gallery.

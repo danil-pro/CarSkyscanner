@@ -129,11 +129,47 @@ def _parse_otomoto(html: str, base_url: str) -> dict:
     }
 
 
+_FB_UI_MARKERS = (
+    "написать продавцу", "подробнее о покупке", "сохранить", "поделиться",
+    "выбор дня", "информация о продавце", "на facebook", "реклама",
+    "отправить сообщение", "показать перевод", "информация о транспортном средстве",
+)
+
+
+def _fb_description(soup) -> Optional[str]:
+    """Seller description: longest leaf-ish block with offer language, no UI chrome."""
+    best = ""
+    for el in soup.find_all(["div", "span"]):
+        t = el.get_text(" ", strip=True)
+        if (120 < len(t) < 3000 and len(el.find_all(["div"])) < 4
+                and any(w in t.lower() for w in
+                        ["sprzed", "samoch", "auto", "olej", "przegl", "stanie",
+                         "rozrząd", "kup", "rasz", "więcej info", "первый влад"])
+                and not any(u in t.lower() for u in _FB_UI_MARKERS)):
+            if len(t) > len(best):
+                best = t
+    return best[:5000] if best else None
+
+
+def _fb_gallery_images(soup) -> list[str]:
+    """FB listing photos: fbcdn images whose alt marks them as product photos
+    (avoids seller avatars, icons and 'Выбор дня' thumbnails, which are also fbcdn)."""
+    seen, out = set(), []
+    for im in soup.select("img"):
+        src = im.get("src") or im.get("data-src") or ""
+        alt = (im.get("alt") or "").lower()
+        if "fbcdn.net" in src and ("фото" in alt or "photo" in alt):
+            if src not in seen:
+                seen.add(src)
+                out.append(src)
+    return out
+
+
 def _parse_facebook(html: str, base_url: str) -> dict:
     soup = BeautifulSoup(html, "html.parser")
     return {
-        "description": _description(soup, ('[data-singular="true"]', 'div[role="main"]', "span")),
-        "images": _images(soup, base_url),
+        "description": _fb_description(soup),
+        "images": _fb_gallery_images(soup),
         "specs": {},
     }
 
