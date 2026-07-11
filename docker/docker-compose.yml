@@ -16,6 +16,7 @@ services:
       # Host port 5433 to avoid clashing with a local Postgres on 5432.
       # The backend reaches the DB over the internal network (postgres:5432).
       - "5433:5432"
+    restart: unless-stopped
 
   backend:
     build:
@@ -36,14 +37,18 @@ services:
         condition: service_healthy
     ports:
       - "8000:8000"
+    restart: unless-stopped
 
   frontend:
     build:
       context: ..
       dockerfile: docker/Dockerfile.frontend
+      args:
+        # Baked into the client bundle. Set NEXT_PUBLIC_API_URL in the root .env
+        # to the PUBLIC API address (http://<vps-ip>:8000 or your domain).
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     environment:
-      # Browser-facing: host port 8000 -> backend container.
-      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
       # Server Components (SSR) run inside this container, where localhost:8000
       # is NOT the backend. Use the internal compose hostname instead.
       API_URL_INTERNAL: http://backend:8000
@@ -51,6 +56,7 @@ services:
       - backend
     ports:
       - "3000:3000"
+    restart: unless-stopped
 
 volumes:
   pgdata:
