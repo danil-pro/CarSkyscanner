@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app import crud, detail_service, schemas
 from app.config import settings
+from scrapers.normalizer import normalize_body_type_value
 
 router = APIRouter()
 
@@ -48,4 +49,13 @@ def car_details(car_id: uuid.UUID, db: Session = Depends(get_db)):
         if datetime.now(timezone.utc) - fetched <= timedelta(seconds=settings.DETAILS_TTL_S):
             return cached
     data = detail_service.fetch_details(car)  # graceful: never raises
-    return crud.upsert_detail(db, car_id, data)
+    detail = crud.upsert_detail(db, car_id, data)
+    # Backfill body_type from detail specs (Typ nadwozia) when the listing had
+    # none — titles rarely include it, so this lets the body_type filter work for
+    # cars the user has actually opened.
+    if not car.body_type:
+        canon = normalize_body_type_value((data.get("specs") or {}).get("Typ nadwozia"))
+        if canon:
+            car.body_type = canon
+            db.commit()
+    return detail

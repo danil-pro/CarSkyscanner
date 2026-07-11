@@ -116,6 +116,53 @@ def extract_brand_model(title: Optional[str]) -> tuple[str, str]:
     return "", ""
 
 
+# Body-type vocabulary (Polish + common), mapped to a canonical value so the
+# body_type filter is consistent across providers. Best-effort from the title.
+BODY_TYPES = {
+    "kombi": "kombi", "sedan": "sedan", "limuzyna": "sedan",
+    "hatchback": "hatchback", "hatch": "hatchback",
+    "suv": "suv", "terenowy": "suv",
+    "coupe": "coupe", "kupé": "coupe", "kupe": "coupe",
+    "cabrio": "cabrio", "cabriolet": "cabrio", "kabriolet": "cabrio",
+    "minivan": "minivan", "van": "van",
+    "pickup": "pickup", "pick-up": "pickup",
+}
+
+
+def extract_body_type(title: Optional[str]) -> Optional[str]:
+    t = _clean(title).lower()
+    if not t:
+        return None
+    for key, canon in BODY_TYPES.items():
+        if re.search(rf"\b{re.escape(key)}\b", t):
+            return canon
+    return None
+
+
+# Detail specs expose body type in Polish ("Typ nadwozia": "Kompakt"/"SUV"/...).
+# Map those values to the same canonical keys used by extract_body_type so the
+# body_type filter is consistent whether the value came from the title or specs.
+BODY_TYPE_VALUES = {
+    "kombi": "kombi", "sedan": "sedan", "limuzyna": "sedan",
+    "hatchback": "hatchback", "kompakt": "hatchback", "compact": "hatchback",
+    "suv": "suv", "terenowy": "suv", "crossover": "suv",
+    "coupe": "coupe", "kupé": "coupe",
+    "cabrio": "cabrio", "cabriolet": "cabrio", "kabriolet": "cabrio",
+    "minivan": "minivan", "van": "van",
+    "pickup": "pickup",
+}
+
+
+def normalize_body_type_value(value) -> Optional[str]:
+    t = _clean(value).lower()
+    if not t:
+        return None
+    for key, canon in BODY_TYPE_VALUES.items():
+        if key in t:
+            return canon
+    return None
+
+
 def normalize(raw: dict) -> Optional[dict]:
     url = _clean(raw.get("url"))
     price = parse_price(raw.get("price"))
@@ -132,6 +179,7 @@ def normalize(raw: dict) -> Optional[dict]:
         "title": title,
         "brand": brand,
         "model": model,
+        "body_type": extract_body_type(title),
         "year": parse_year(raw.get("year")),
         "price": price,
         "currency": "PLN",

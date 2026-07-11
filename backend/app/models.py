@@ -23,6 +23,7 @@ class Car(Base):
     mileage: Mapped[int] = mapped_column(Integer, nullable=True)
     fuel_type: Mapped[str] = mapped_column(String(32), nullable=True)
     transmission: Mapped[str] = mapped_column(String(32), nullable=True)
+    body_type: Mapped[str] = mapped_column(String(32), nullable=True)
     location: Mapped[str] = mapped_column(String, nullable=True)
     source: Mapped[str] = mapped_column(String(32), nullable=False)
     url: Mapped[str] = mapped_column(String, nullable=False)

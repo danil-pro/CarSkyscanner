@@ -27,3 +27,4 @@ def init_db() -> None:
         from sqlalchemy import text
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE car_details ADD COLUMN IF NOT EXISTS specs JSON"))
+            conn.execute(text("ALTER TABLE cars ADD COLUMN IF NOT EXISTS body_type VARCHAR(32)"))

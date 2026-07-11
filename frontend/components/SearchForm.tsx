@@ -29,6 +29,8 @@ export function SearchForm({
           mileage_max: num("mileage_max"),
           fuel_type: str("fuel_type"),
           transmission: str("transmission"),
+          body_type: str("body_type"),
+          location: str("location"),
         });
       }}
       className="bg-white rounded-lg shadow p-4 grid grid-cols-2 md:grid-cols-3 gap-3"
@@ -53,6 +55,19 @@ export function SearchForm({
         <option value="manual">Механика</option>
         <option value="automatic">Автомат</option>
       </select>
+      <select name="body_type" className={INPUT_CLASS} defaultValue={defaults.body_type ?? ""}>
+        <option value="">Кузов</option>
+        <option value="sedan">Седан</option>
+        <option value="kombi">Универсал</option>
+        <option value="hatchback">Хэтчбек</option>
+        <option value="suv">Внедорожник</option>
+        <option value="coupe">Купе</option>
+        <option value="cabrio">Кабриолет</option>
+        <option value="van">Фургон</option>
+        <option value="minivan">Минивэн</option>
+        <option value="pickup">Пикап</option>
+      </select>
+      <input name="location" placeholder="Локация (город)" defaultValue={defaults.location ?? ""} className={INPUT_CLASS} />
       <button className="col-span-2 md:col-span-3 bg-blue-600 text-white rounded py-2 hover:bg-blue-700">
         Найти
       </button>

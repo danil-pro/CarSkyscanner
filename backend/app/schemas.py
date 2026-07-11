@@ -14,6 +14,8 @@ class SearchFilters(BaseModel):
     mileage_max: Optional[int] = None
     fuel_type: Optional[str] = None
     transmission: Optional[str] = None
+    body_type: Optional[str] = None
+    location: Optional[str] = None
 
 
 class CarOut(BaseModel):
@@ -28,6 +30,7 @@ class CarOut(BaseModel):
     mileage: Optional[int]
     fuel_type: Optional[str]
     transmission: Optional[str]
+    body_type: Optional[str]
     location: Optional[str]
     source: str
     url: str

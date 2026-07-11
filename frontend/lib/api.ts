@@ -4,14 +4,14 @@ export interface Car {
   id: string; title: string | null; brand: string; model: string;
   year: number | null; price: number | null; currency: string;
   mileage: number | null; fuel_type: string | null; transmission: string | null;
-  location: string | null; source: string; url: string; image_url: string | null;
+  body_type: string | null; location: string | null; source: string; url: string; image_url: string | null;
   created_at: string;
 }
 
 export interface Filters {
   brand?: string; model?: string; year_min?: number; year_max?: number;
   price_min?: number; price_max?: number; mileage_max?: number;
-  fuel_type?: string; transmission?: string;
+  fuel_type?: string; transmission?: string; body_type?: string; location?: string;
 }
 
 export interface SearchResponse { items: Car[]; total: number; limit: number; offset: number; }
@@ -50,6 +50,7 @@ export function queryToFilters(sp: URLSearchParams): Filters {
     brand: s("brand"), model: s("model"), year_min: n("year_min"), year_max: n("year_max"),
     price_min: n("price_min"), price_max: n("price_max"), mileage_max: n("mileage_max"),
     fuel_type: s("fuel_type"), transmission: s("transmission"),
+    body_type: s("body_type"), location: s("location"),
   };
 }
 export const runScrape = () => req<{ job_id: string; status: string }>("/scrape/run", { method: "POST" });

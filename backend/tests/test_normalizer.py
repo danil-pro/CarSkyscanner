@@ -1,6 +1,6 @@
 from scrapers.normalizer import (
     normalize, parse_price, parse_mileage, parse_year,
-    normalize_fuel, normalize_transmission,
+    normalize_fuel, normalize_transmission, extract_body_type,
 )
 
 
@@ -71,3 +71,26 @@ def test_parse_year_rejects_future_years():
     assert parse_year("2026", now_year=2026) == 2026
     assert parse_year("2019", now_year=2026) == 2019
     assert parse_year(None) is None
+
+
+def test_extract_body_type_from_title():
+    assert extract_body_type("Volkswagen Golf kombi 2018") == "kombi"
+    assert extract_body_type("Audi Q5 SUV") == "suv"
+    assert extract_body_type("Mazda MX-5 cabrio") == "cabrio"
+    assert extract_body_type("Toyota Yaris hatchback") == "hatchback"
+    assert extract_body_type("Skoda Octavia sedan") == "sedan"
+    assert extract_body_type("Toyota Yaris 2018") is None
+
+
+def test_normalize_includes_body_type():
+    n = normalize({"title": "Golf kombi 1.6", "url": "u", "price": "1000"})
+    assert n and n["body_type"] == "kombi"
+
+
+def test_normalize_body_type_value():
+    from scrapers.normalizer import normalize_body_type_value
+    assert normalize_body_type_value("Kompakt") == "hatchback"
+    assert normalize_body_type_value("SUV") == "suv"
+    assert normalize_body_type_value("Kombi") == "kombi"
+    assert normalize_body_type_value("Cabrio") == "cabrio"
+    assert normalize_body_type_value(None) is None

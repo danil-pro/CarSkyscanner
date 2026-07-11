@@ -69,6 +69,10 @@ def _apply(filters, q):
         q = q.where(func.lower(Car.fuel_type) == filters.fuel_type.lower())
     if filters.transmission:
         q = q.where(func.lower(Car.transmission) == filters.transmission.lower())
+    if filters.body_type:
+        q = q.where(func.lower(Car.body_type) == filters.body_type.lower())
+    if filters.location:
+        q = q.where(Car.location.ilike(f"%{filters.location.strip()}%"))
     return q
 
 
